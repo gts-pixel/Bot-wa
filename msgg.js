@@ -1,38 +1,30 @@
-// msgg.js
-const db = require('./db').promise(); // Import koneksi database MySQL promise wrapper
+// msgg.js — Baileys compatible
+const db = require('./db').promise();
 
-module.exports = async (client, message) => {
+module.exports = async (sock, message) => {
     try {
-        const body = message.body || "";
+        const body   = message.body || '';
         const sender = message.from;
-        const chat = await message.getChat();
+        const chat   = await message.getChat();
         const contact = await message.getContact();
-        const nama = contact.pushname || contact.name || sender.split('@')[0];
+        const nama   = contact.pushname || sender.split('@')[0];
 
-        // Prefix Bot
-        if (!body.startsWith(".")) return;
+        if (!body.startsWith('.')) return;
 
-        // Ambil command setelah prefix
-        const command = body.slice(1).trim().toLowerCase();
+        // Ambil command (full, tanpa split — biar ping dll bisa pakai const)
+        const fullCmd = body.slice(1).trim().toLowerCase();
+        const command = fullCmd.split(/\s+/)[0];
 
-        // Simpan user ke DB kalau belum ada
-        await db.query(`
-            INSERT IGNORE INTO users (nomor, nama) VALUES (?, ?)
-        `, [sender, nama]);
-
-        // Log setiap perintah
-        await db.query(`
-            INSERT INTO log_perintah (nomor, perintah) VALUES (?, ?)
-        `, [sender, command]);
-
-        // Log pesan masuk
-        console.log(`Perintah diterima: ${command} dari ${sender}`);
+        await db.query('INSERT IGNORE INTO users (nomor, nama) VALUES (?, ?)', [sender, nama]);
+        await db.query('INSERT INTO log_perintah (nomor, perintah) VALUES (?, ?)', [sender, command]);
+        console.log(`Perintah: ${command} dari ${sender}`);
 
         switch (command) {
-            case "halo":
-                await chat.sendMessage("Halo! 👋 Ada yang bisa dibantu?");
+            case 'halo':
+                await chat.sendMessage('Halo! 👋 Ada yang bisa dibantu?');
                 break;
-            case "help":
+
+            case 'help':
                 await chat.sendMessage(
                     '╔═══『 📜 Menu Bot 』═══╗\n\n' +
                     '✦ .halo      → Menyapa bot\n' +
@@ -44,88 +36,80 @@ module.exports = async (client, message) => {
                     '✦ .sticker   → Ubah gambar jadi stiker\n' +
                     '✦ .update    → Lihat update terbaru\n' +
                     '╚══════════════════════╝\n\n' +
-                    '\n╔═══『 ⚔️ RPG Menu 』═══╗\n\n' +
-                    '✦ .login     → Login Rpg\n' +
+                    '╔═══『 ⚔️ RPG Menu 』═══╗\n\n' +
+                    '✦ .login     → Login RPG\n' +
                     '✦ .change    → Ubah nama\n' +
                     '✦ .profile   → Lihat Profile\n' +
-                    '✦ .class [nama class] → Pilih class\n' +
+                    '✦ .class [nama] → Pilih class\n' +
                     '✦ .classes   → Daftar Classes\n' +
                     '✦ .skill     → Skill dimiliki\n' +
                     '✦ .use [1/2/3] → Gunakan skill\n' +
                     '✦ .hunt      → Berburu monster\n' +
                     '✦ .attack    → Serang musuh\n' +
                     '✦ .flee      → Kabur Battle\n' +
-                    '✦ .addstat [stat] [jumlah] → Tambah Stat\n' +
+                    '✦ .item [nama] → Pakai item\n' +
+                    '✦ .inv       → Lihat inventory\n' +
+                    '✦ .addstat [stat] [jml] → Tambah Stat\n' +
                     '✦ .statpoint → Lihat Stat Point\n' +
-                    '╚══════════════════════╝'+
-                    '\n\n📌 Catatan: Fitur RPG masih dalam tahap pengembangan, jadi harap bersabar ya!'
+                    '╚══════════════════════╝\n\n' +
+                    '📌 Fitur RPG masih dalam pengembangan!'
                 );
                 break;
 
-            case "ping":
+            case 'ping': {
                 const start = Date.now();
-                const sent = await chat.sendMessage("Pong! 🏓");
+                await chat.sendMessage('Pong! 🏓');
                 const ping = Date.now() - start;
-                await sent.reply(`⚡ Ping: *${ping}ms*`);
+                await chat.sendMessage(`⚡ Ping: *${ping}ms*`);
                 break;
+            }
 
-            case "waktu":
-                const now = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+            case 'waktu': {
+                const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
                 await chat.sendMessage(`🕐 Waktu sekarang: ${now}`);
                 break;
+            }
 
-            case "info":
-                if (chat.isGroup) {
+            case 'info':
+                if (message.isGroup) {
                     await chat.sendMessage(
                         `ℹ️ *Info Grup*\n\n` +
-                        `Nama: ${chat.name}\n` +
-                        `Deskripsi: ${chat.description || 'Tidak ada deskripsi'}\n` +
-                        `Jumlah Anggota: ${chat.participants.length}`
+                        `Nama: ${chat.name}\n`
                     );
                 } else {
-                    await chat.sendMessage("ℹ️ Info grup hanya tersedia di grup.");
+                    await chat.sendMessage('ℹ️ Info grup hanya tersedia di grup.');
                 }
                 break;
-            case "owner":
+
+            case 'owner':
                 await chat.sendMessage(
-                    "👤 *Info Pembuat Bot*\n\n" +
-                    "Nama: カビゴンSnorlax\n" +
-                    "GitHub: https://github.com/gts-pixel"
+                    '👤 *Info Pembuat Bot*\n\n' +
+                    'Nama: カビゴンSnorlax\n' +
+                    'GitHub: https://github.com/gts-pixel'
                 );
                 break;
-            case "sticker":
-                if (message.hasMedia) {
-                    const media = await message.downloadMedia();    
-                    await message.reply(media, null, { sendMediaAsSticker: true });
-                } else {
-                    await chat.sendMessage("❌ Balas gambar dengan caption .sticker untuk membuat stiker.");
-                }
-            case "s":
-                if (message.hasMedia) {
-                    const media = await message.downloadMedia();  
-                    await message.reply(media, null, { sendMediaAsSticker: true });  
-                    } else {
-                    await chat.sendMessage("❌ Balas gambar dengan caption .sticker untuk membuat stiker.");
-                }
-                break;
-            case "toimg":
+
+            case 'sticker':
+            case 's':
                 if (message.hasMedia) {
                     const media = await message.downloadMedia();
-                    await message.reply(media, null, { sendMediaAsSticker: false }); 
+                    await sock.sendMessage(sender, {
+                        sticker: Buffer.from(media.data, 'base64'),
+                    });
                 } else {
-                    await chat.sendMessage("❌ Balas stiker dengan caption .toimg untuk mengubahnya menjadi gambar.");
+                    await chat.sendMessage('❌ Balas gambar dengan caption .sticker untuk membuat stiker.');
                 }
-                break;    
-            case "update":
-                await chat.sendMessage("Penambahan fitur .hunt, .attack, dan .flee ");
-                await chat.sendMessage("\n untuk kedepannya tidak akan ada update fitur baru dan kemungkinan tidak ada perbaikan sementara hingga awal bulan depan")    
                 break;
+
+            case 'update':
+                await chat.sendMessage('Penambahan fitur .hunt, .attack, .flee, .inv, .item');
+                break;
+
             default:
-                await chat.sendMessage(`❓ Command *.${command}* tidak dikenal. Ketik *.help* untuk melihat daftar perintah.`);
-                break;
+                await chat.sendMessage(`❓ Command *.${command}* tidak dikenal. Ketik *.help* untuk daftar perintah.`);
         }
 
-    } catch (error) {
-        console.error("Error di msgg:", error);
+    } catch (err) {
+        console.error('Error di msgg:', err);
     }
 };

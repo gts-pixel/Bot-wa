@@ -1,4 +1,3 @@
-const { retry } = require('puppeteer-core/lib/esm/third_party/rxjs/rxjs.js');
 const db = require('./db').promise();
 const { TIER_F_MONSTERS, calcMonsterDerived, rollGold, rollDrops } = require('./Mons');
 const { findSkill } = require('./RpgClassSkill');

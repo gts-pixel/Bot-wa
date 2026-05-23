@@ -1,15 +1,14 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const pino = require('pino')
 const qrcode = require('qrcode-terminal');
 const msgg = require('./msgg');
 const rpg = require('./rpg');
+require('dotenv').config();
 
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
+const conn = require('./db');
+conn.query('SELECT 1', (err) => {
+    if (err) console.warn('⚠️ DB error:', err.message);
+    else console.log('✅ Database connected!');
 });
 
 const GRUP_IZIN = [
@@ -19,74 +18,159 @@ const GRUP_IZIN = [
     '120363296922684488@g.us',
 ];
 
-client.on('qr', (qr) => {
-    console.log('Scan QR ini di WhatsApp kamu:');
-    qrcode.generate(qr, { small: true });
-});
+async function startBot() {
+    const { version } = await fetchLatestBaileysVersion();
+    const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
 
-client.on('ready', () => {
-    console.log('✅ Bot siap!');
-});
+    const sock = makeWASocket({
+        version,
+        auth: state,
+        logger: pino({ level: 'silent'}),
+        printQRInTerminal: true,
+    });
 
-require('dotenv').config();
-const conn = require('./db');
+    // ── QR ──
+    sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
+        if (qr) {
+            console.log('Scan QR ini:');
+            qrcode.generate(qr, { small: true });
+        }
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log('Koneksi terputus, reconnect:', shouldReconnect);
+            if (shouldReconnect) startBot();
+        }
+        if (connection === 'open') {
+            console.log('✅ Bot siap!');
+        }
+    });
 
-// Test database connection (optional)
-conn.query('SELECT * FROM users', (err, rows) => {
-  if (err) {
-    console.warn('⚠️ Database query error (bot will continue):', err.message);
-  } else {
-    console.log('📊 Database query result:', rows);
-  }
-});
+    sock.ev.on('creds.update', saveCreds);
 
-// ✅ Event message — sambungkan ke msgg.js atau rpg.js
-client.on('message', async (message) => {
-    const chat = await message.getChat();
-    if (chat.isGroup && !GRUP_IZIN.includes(chat.id._serialized)) return;
+    // ── PESAN MASUK ──
+    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        if (type !== 'notify') return;
 
-    console.log(chat.id._serialized);
+        for (const msg of messages) {
+            if (msg.key.fromMe) continue;
+            if (!msg.message) continue;
 
-    const body = message.body || '';
-    const command = body.startsWith('.') ? body.slice(1).trim().toLowerCase().split(/\s+/)[0] : '';
+            const from = msg.key.remoteJid;
+            const isGroup = from.endsWith('@g.us');
 
-    // Daftar command RPG
-    const rpgCommands = ['login', 'change', 'halo', 
-        'profile', 'class', 'classes', 
-        'skills', 'use', 'hunt', 
-        'attack', 'flee', 'skill',
-        'addstat', 'statpoint'];
+            // Filter grup
+            if (isGroup && !GRUP_IZIN.includes(from)) continue;
 
-    if (rpgCommands.includes(command)) {
-        await rpg(client, message);
-        return;
-    }
+            // Ambil teks pesan
+            const body = msg.message?.conversation
+                || msg.message?.extendedTextMessage?.text
+                || msg.message?.imageMessage?.caption
+                || '';
 
-    await msgg(client, message);
-});
+            if (!body.startsWith('.')) continue;
 
-client.on('group_join', async (notification) => {
-    try {
-        const chat = await notification.getChat();
+            const command = body.slice(1).trim().toLowerCase().split(/\s+/)[0];
 
-        if (!GRUP_IZIN.includes(chat.id._serialized)) return;
+            const rpgCommands = [
+                'login', 'change', 'profile', 'class', 'classes',
+                'skill', 'skills', 'use', 'hunt', 'attack', 'flee',
+                'item', 'inv', 'addstat', 'statpoint',
+            ];
 
-        const namaMember = notification.recipientIds[0].split('@')[0];
-        const namaGroup = chat.name;
+            // Bungkus msg agar kompatibel dengan handler lama
+            const wrappedMsg = wrapMessage(sock, msg, from, body, isGroup);
 
-        const pesanWelcome =
-            `👋 Selamat datang *@${namaMember}* di grup *${namaGroup}*!\n\n` +
-            `Senang kamu bergabung 🎉\n` +
-            `Jangan lupa baca deskripsi grup ya!` +
-            `\nKetik *.help* untuk melihat menu perintah yang tersedia.`;
+            if (rpgCommands.includes(command)) {
+                await rpg(sock, wrappedMsg).catch(e => console.error('RPG error:', e));
+            } else {
+                await msgg(sock, wrappedMsg).catch(e => console.error('MSGG error:', e));
+            }
+        }
+    });
 
-        await chat.sendMessage(pesanWelcome, {
-            mentions: [notification.recipientIds[0]]
-        });
+    // ── MEMBER JOIN ──
+    sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
+        if (!GRUP_IZIN.includes(id)) return;
+        if (action !== 'add') return;
 
-    } catch (error) {
-        console.error('Error welcome:', error);
-    }
-});
+        try {
+            const metadata = await sock.groupMetadata(id);
+            for (const participant of participants) {
+                const nomor = participant.split('@')[0];
+                const pesanWelcome =
+                    `👋 Selamat datang *@${nomor}* di grup *${metadata.subject}*!\n\n` +
+                    `Senang kamu bergabung 🎉\n` +
+                    `Jangan lupa baca deskripsi grup ya!`;
+                await sock.sendMessage(id, {
+                    text: pesanWelcome,
+                    mentions: [participant]
+                });
+            }
+        } catch (e) {
+            console.error('Welcome error:', e);
+        }
+    });
+}
 
-client.initialize();
+// ── WRAPPER ──────────────────────────────────────────────
+// Membuat object msg Baileys kompatibel dengan handler yang sudah ada
+function wrapMessage(sock, msg, from, body, isGroup) {
+    const senderId = isGroup
+        ? (msg.key.participant || msg.key.remoteJid)
+        : msg.key.remoteJid;
+
+    const pushname = msg.pushName || senderId.split('@')[0];
+
+    return {
+        // Data dasar
+        body,
+        from,
+        author: senderId,          // di grup = nomor pengirim
+        id: msg.key.id,
+        isGroup,
+        pushName: pushname,
+        hasMedia: !!(msg.message?.imageMessage || msg.message?.videoMessage),
+        _raw: msg,                 // raw Baileys message
+
+        // Ambil chat (simulasi)
+        getChat: async () => ({
+            id: { _serialized: from },
+            isGroup,
+            name: isGroup ? (await sock.groupMetadata(from).catch(() => ({ subject: from }))).subject : from,
+            sendMessage: async (text, opts) => {
+                const mentions = opts?.mentions || [];
+                return sock.sendMessage(from, { text, mentions });
+            },
+        }),
+
+        // Ambil kontak
+        getContact: async () => ({
+            pushname,
+            name: pushname,
+            number: senderId.split('@')[0],
+        }),
+
+        // Reply ke pesan ini
+        reply: async (text) => {
+            return sock.sendMessage(from, {
+                text,
+                quoted: msg,
+            });
+        },
+
+        // Download media (jika ada)
+        downloadMedia: async () => {
+            const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+            const buffer = await downloadMediaMessage(msg, 'buffer', {});
+            const mimetype = msg.message?.imageMessage?.mimetype
+                || msg.message?.videoMessage?.mimetype
+                || 'image/jpeg';
+            return {
+                data: buffer.toString('base64'),
+                mimetype,
+            };
+        },
+    };
+}
+
+startBot();
