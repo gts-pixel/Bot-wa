@@ -74,7 +74,7 @@ async function startBot() {
             const rpgCommands = [
                 'login', 'change', 'profile', 'class', 'classes',
                 'skill', 'skills', 'use', 'hunt', 'attack', 'flee',
-                'item', 'inv', 'addstat', 'statpoint',
+                'item', 'inv', 'addstat', 'statpoint', 'leaderboard', 'lb',
             ];
 
             // Bungkus msg agar kompatibel dengan handler lama

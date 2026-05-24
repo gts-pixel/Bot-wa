@@ -614,6 +614,78 @@ module.exports = async (client, message) => {
                 break;
             }
 
+            case "leaderboard":
+            case "lb": {
+                try {
+                    const lbType = args.trim().toLowerCase();
+                    const validTypes = { level: 'level', lvl: 'level', gold: 'gold', exp: 'exp' };
+                    const sortBy = validTypes[lbType] || 'level';
+
+                    const [lbRows] = await db.query(
+                        `SELECT nama, level, exp, gold, class
+                         FROM rpg_players
+                         ORDER BY ${sortBy} DESC, exp DESC
+                         LIMIT 10`
+                    );
+
+                    if (!lbRows.length) {
+                        await chat.sendMessage('📊 Belum ada pemain yang terdaftar.');
+                        break;
+                    }
+
+                    const medals = ['🥇', '🥈', '🥉', '🔴4️⃣', '🔴5️⃣', '🔴6️⃣', '🔴7️⃣', '🔴8️⃣', '🔴9️⃣', '🔴🔟'];
+                    const typeLabel = sortBy === 'level' ? 'Level' : sortBy === 'gold' ? 'Gold' : 'EXP';
+                    const typeEmoji = sortBy === 'level' ? '⭐' : sortBy === 'gold' ? '💰' : '✨';
+
+                    // Cari rank pemain yang ngirim command
+                    const [rankRow] = await db.query(
+                        `SELECT COUNT(*) + 1 as myrank FROM rpg_players
+                         WHERE ${sortBy} > (SELECT ${sortBy} FROM rpg_players WHERE nomor = ?)`
+                    , [senderId]);
+                    const myRank = rankRow[0]?.myrank || '-';
+
+                    const [myRow] = await db.query(
+                        `SELECT nama, level, exp, gold, class FROM rpg_players WHERE nomor = ?`
+                    , [senderId]);
+                    const myData = myRow[0];
+
+                    let text = `╔═════╬🏆 TOP 10 ${typeLabel} 🏆╬═════╗\n`;
+
+                    lbRows.forEach((row, i) => {
+                        const classInfo = CLASS_DATA[row.class] || CLASS_DATA['non'];
+                        const value = sortBy === 'level'
+                            ? `Lv.*${row.level}*  ✨ ${row.exp} EXP`
+                            : sortBy === 'gold'
+                            ? `💰 *${row.gold}* gold  |  Lv.${row.level}`
+                            : `✨ *${row.exp}* exp  |  Lv.${row.level}`;
+                        text += `${medals[i]} *${row.nama}* ${classInfo.emoji}\n`;
+                        text += `     └─ ${value}\n`;
+                    });
+
+                    text += `╚══════════════════════╝\n`;
+
+                    // Tampilkan rank pemain sendiri
+                    if (myData) {
+                        const classInfo = CLASS_DATA[myData.class] || CLASS_DATA['non'];
+                        const myVal = sortBy === 'level'
+                            ? `Lv.*${myData.level}*  ✨ ${myData.exp} EXP`
+                            : sortBy === 'gold'
+                            ? `💰 *${myData.gold}* gold  |  Lv.${myData.level}`
+                            : `✨ *${myData.exp}* exp  |  Lv.${myData.level}`;
+                        text += `📌 *Rankmu:* #${myRank} — ${myData.nama} ${classInfo.emoji}\n`;
+                        text += `     └─ ${myVal}\n`;
+                    }
+
+                    text += `\n📌 Filter: *.lb level* | *.lb gold* | *.lb exp*`;
+
+                    await chat.sendMessage(text);
+                } catch (err) {
+                    console.error('Leaderboard error:', err);
+                    await chat.sendMessage('❌ Terjadi kesalahan saat mengambil leaderboard.');
+                }
+                break;
+            }
+
             case "shop" : {
                 
             }
