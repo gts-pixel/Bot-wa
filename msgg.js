@@ -74,7 +74,8 @@ module.exports = async (sock, message) => {
                 if (message.isGroup) {
                     await chat.sendMessage(
                         `ℹ️ *Info Grup*\n\n` +
-                        `Nama: ${chat.name}\n`
+                        `Nama: ${chat.name}\n` +
+                        `Deskripsi: ${chat.description || 'Tidak ada deskripsi'}\n` 
                     );
                 } else {
                     await chat.sendMessage('ℹ️ Info grup hanya tersedia di grup.');
@@ -102,7 +103,7 @@ module.exports = async (sock, message) => {
                 break;
 
             case 'update':
-                await chat.sendMessage('Penambahan fitur .hunt, .attack, .flee, .inv, .item');
+                await chat.sendMessage('Penambahan fitur .inv, .item' + '\nFitur ini masih dalam tahap beta dan masih butuh perbaikan kedepannya');
                 break;
 
             default:

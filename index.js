@@ -12,10 +12,10 @@ conn.query('SELECT 1', (err) => {
 });
 
 const GRUP_IZIN = [
-    '120363299346931674@g.us',
     '120363158480249048@g.us',
     '120363313283156757@g.us',
     '120363296922684488@g.us',
+    '120363299346931674@g.us',
 ];
 
 async function startBot() {
