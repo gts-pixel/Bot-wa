@@ -52,7 +52,8 @@ module.exports = async (sock, message) => {
                     '✦ .addstat [stat] [jml] → Tambah Stat\n' +
                     '✦ .statpoint → Lihat Stat Point\n' +
                     '╚══════════════════════╝\n\n' +
-                    '📌 Fitur RPG masih dalam pengembangan!'
+                    '📌 Fitur RPG masih dalam pengembangan!\n' +
+                    '\nketik .update untuk melihat update terbaru!'
                 );
                 break;
 
