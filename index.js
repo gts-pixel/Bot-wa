@@ -27,6 +27,10 @@ async function startBot() {
         auth: state,
         logger: pino({ level: 'silent'}),
         printQRInTerminal: true,
+        shouldIgnoreJid: jid => jid.endsWith('@lid'),
+        getMessage: async (key) => {
+            return {conversation: ''};
+        }
     });
 
     // ── QR ──
@@ -75,6 +79,8 @@ async function startBot() {
                 'login', 'change', 'profile', 'class', 'classes',
                 'skill', 'skills', 'use', 'hunt', 'attack', 'flee',
                 'item', 'inv', 'addstat', 'statpoint', 'leaderboard', 'lb',
+                'addsysitem', 'addeffect', 'iteminfo', 'items', 'inventory',
+                'equip', 'inequip', 'useitem',
             ];
 
             // Bungkus msg agar kompatibel dengan handler lama

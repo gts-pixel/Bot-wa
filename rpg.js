@@ -5,6 +5,7 @@ const { formatSkillList, useSkill } = require('./RpgClassSkill');
 const { startHunt, doAttack, doSkill, doFlee } = require('./battle');
 const RpgClassSkill = require('./RpgClassSkill');
 const { getInventory, formatInventory } = require('./Inventory');
+const dbitem = require('./dbitem');
 
 // Definisi class rpg
 const DEFAULT_CLASS = 'non';
@@ -583,36 +584,36 @@ module.exports = async (client, message) => {
                 break;
             }
 
-            case "inv" : {
-                const [invPlayerRows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ? ', [senderId]);
-                if (!invPlayerRows.length) {
-                    await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
-                    break;
-                }
-                const invRows = await getInventory(senderId);
-                await chat.sendMessage(formatInventory(invRows));
-                break;
-            }
+            // case "inv" : {
+            //     const [invPlayerRows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ? ', [senderId]);
+            //     if (!invPlayerRows.length) {
+            //         await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
+            //         break;
+            //     }
+            //     const invRows = await getInventory(senderId);
+            //     await chat.sendMessage(formatInventory(invRows));
+            //     break;
+            // }
 
-            case "item": {
-                if (!args) {
-                    await chat.sendMessage(
-                        '❌ Format salah.\nGunakan: *.item [nama item]*\n\nContoh: *.item HP Potion*\n\nKetik *.inv* untuk melihat inventory kamu.'
-                    );
-                    break;
-                }
-                const [itemPlayerRows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ?', [senderId]);
-                if (!itemPlayerRows.length) {
-                    await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
-                    break;
-                }
-                const playerRow = itemPlayerRows[0];
-                const { activeBattles } = require('./battle');
-                const inBattle = !!activeBattles[senderId];
-                const itemResult = await useItem(senderId, args, playerRow, inBattle);
-                await chat.sendMessage(itemResult.message);
-                break;
-            }
+            // case "item": {
+            //     if (!args) {
+            //         await chat.sendMessage(
+            //             '❌ Format salah.\nGunakan: *.item [nama item]*\n\nContoh: *.item HP Potion*\n\nKetik *.inv* untuk melihat inventory kamu.'
+            //         );
+            //         break;
+            //     }
+            //     const [itemPlayerRows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ?', [senderId]);
+            //     if (!itemPlayerRows.length) {
+            //         await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
+            //         break;
+            //     }
+            //     const playerRow = itemPlayerRows[0];
+            //     const { activeBattles } = require('./battle');
+            //     const inBattle = !!activeBattles[senderId];
+            //     const itemResult = await useItem(senderId, args, playerRow, inBattle);
+            //     await chat.sendMessage(itemResult.message);
+            //     break;
+            // }
 
             case "leaderboard":
             case "lb": {
@@ -686,6 +687,17 @@ module.exports = async (client, message) => {
                 break;
             }
 
+            case 'addsysitem':
+            case 'addeffect':
+            case 'iteminfo':
+            case 'items':
+            case 'inv':
+            case 'inventory':
+            case 'equip':
+            case 'unequip':
+            case 'useitem':
+                await dbitem.handleCommand(client, message, command, args);
+                break;
             case "shop" : {
                 
             }
