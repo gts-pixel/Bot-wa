@@ -6,6 +6,7 @@ const { startHunt, doAttack, doSkill, doFlee } = require('./battle');
 const RpgClassSkill = require('./RpgClassSkill');
 const { getInventory, formatInventory } = require('./Inventory');
 const dbitem = require('./dbitem');
+const { checkCooldown } = require ('./cd')
 
 // Definisi class rpg
 const DEFAULT_CLASS = 'non';
@@ -298,6 +299,13 @@ module.exports = async (client, message) => {
 
         // Terapkan auto regen sebelum eksekusi command
         await applyAutoRegen(senderId);
+
+        // ── ANTI-SPAM COOLDOWN ──
+        const sisaCD = checkCooldown(senderId);
+        if (sisaCD > 0) {
+            await chat.sendMessage(`⏳ Tunggu *${sisaCD} detik* lagi sebelum pakai command berikutnya.`);
+            return;
+        }
 
         // Log pesan masuk
         console.log(`Perintah diterima: ${command} dari ${senderId}`);

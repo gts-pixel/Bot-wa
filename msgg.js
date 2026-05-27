@@ -1,5 +1,6 @@
 // msgg.js — Baileys compatible
 const db = require('./db').promise();
+const { checkCooldown } = require ('./cd')
 
 module.exports = async (sock, message) => {
     try {
@@ -18,6 +19,13 @@ module.exports = async (sock, message) => {
         await db.query('INSERT IGNORE INTO users (nomor, nama) VALUES (?, ?)', [sender, nama]);
         await db.query('INSERT INTO log_perintah (nomor, perintah) VALUES (?, ?)', [sender, command]);
         console.log(`Perintah: ${command} dari ${sender}`);
+
+        // ── ANTI-SPAM COOLDOWN ──
+        const sisaCD = checkCooldown(sender);
+        if (sisaCD > 0) {
+            await chat.sendMessage(`⏳ Tunggu *${sisaCD} detik* lagi sebelum pakai command berikutnya.`);
+            return;
+        }
 
         switch (command) {
             case 'halo':
