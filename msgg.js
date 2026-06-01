@@ -112,7 +112,11 @@ module.exports = async (sock, message) => {
                 break;
 
             case 'update':
-                await chat.sendMessage('Penambahan fitur .inv, .item' + '\nFitur ini masih dalam tahap beta dan masih butuh perbaikan kedepannya');
+                await chat.sendMessage('Peningkatan Stat monster sebesar 100% dan peningkatan sedikit pendapatan exp dari monster yang dikalahkan\n');
+                break;
+
+            case 'kosong':
+                await chat.sendMessage('');
                 break;
 
             default:
