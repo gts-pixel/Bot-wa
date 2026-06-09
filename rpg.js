@@ -7,6 +7,15 @@ const RpgClassSkill = require('./RpgClassSkill');
 const { getInventory, formatInventory } = require('./Inventory');
 const dbitem = require('./dbitem');
 const { checkCooldown } = require ('./cd')
+const { redeemCode, createCode } = require("./Redeem");
+const OWNER_NUMBERS = (process.env.OWNER_NUMBER || '')
+    .split(',')
+    .map(n => n.trim().replace(/@.*$/, ''))
+    .filter(Boolean);
+
+function isOwner(senderId) {
+    return OWNER_NUMBERS.includes((senderId || '').split('@')[0]);
+}
 
 // Definisi class rpg
 const DEFAULT_CLASS = 'non';
@@ -708,6 +717,52 @@ module.exports = async (client, message) => {
                 break;
             case "shop" : {
                 
+            }
+
+            case 'redeem': {
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.redeem [KODE]*\nContoh: *.redeem LAUNCH2025*');
+                    break;
+                }
+                const result = await redeemCode(senderId, args.trim());
+                await chat.sendMessage(result.message);
+                break;
+            }
+
+            // Admin only
+            case 'addcode': {
+                if (!isOwner(senderId)) {
+                    await chat.sendMessage('❌ Kamu bukan admin.');
+                    break;
+                }
+                // Format: .addcode KODE gold:500 exp:1000 uses:10
+                // Atau:   .addcode KODE gold:500 item:HP Potion itemqty:3
+                const parts = args.trim().split(/\s+/);
+                const kode = parts[0];
+                if (!kode) {
+                    await chat.sendMessage('❌ Format: *.addcode KODE gold:500 exp:1000 uses:10*');
+                    break;
+                }
+                const opts = {};
+                parts.slice(1).forEach(p => {
+                    const [k, v] = p.split(':');
+                    if (k === 'gold') opts.gold = parseInt(v);
+                    else if (k === 'exp') opts.exp = parseInt(v);
+                    else if (k === 'uses') opts.maxUses = parseInt(v);
+                    else if (k === 'item') opts.item = v.replace(/_/g, ' ');
+                    else if (k === 'itemqty') opts.itemQty = parseInt(v);
+                    else if (k === 'expires') opts.expiresAt = v.replace(/_/g, ' ');
+                });
+                try {
+                    const created = await createCode(kode, opts);
+                    await chat.sendMessage(
+                        `✅ Kode *${created}* berhasil dibuat!\n` +
+                        `Gold: ${opts.gold || 0} | EXP: ${opts.exp || 0} | Max uses: ${opts.maxUses || 1}`
+                    );
+                } catch (e) {
+                    await chat.sendMessage('❌ Kode sudah ada atau terjadi error.');
+                }
+                break;
             }
 
             default:

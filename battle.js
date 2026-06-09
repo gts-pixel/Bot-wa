@@ -42,7 +42,16 @@ function formatMonsterStatus(monster, monsterHp) {
 }
 
 function formatPlayerStatus(player) {
-    return `❤️ HP: ${player.hp}/${player.max_hp} | 💙 MP: ${player.mp}/${player.max_mp}`;
+    const maxHp = player.max_hp ?? player.maxHP ?? 0;
+    const maxMp = player.max_mp ?? player.maxMP ?? 0;
+    const currentHp = player.hp ?? 0;
+    const currentMp = player.mp ?? 0;
+    return `❤️ HP: ${currentHp}/${maxHp} | 💙 MP: ${currentMp}/${maxMp}`;
+}
+
+function formatMonsterSkill(monster) {
+    if (!monster.skill) return '';
+    return `Skill: *${monster.skill.name}* (${monster.skill.type === 'active' ? 'Active' : 'Passive'})\n${monster.skill.desc}\n\n`;
 }
 
 // monster ai
@@ -102,7 +111,7 @@ async function startHunt(senderId, chat) {
         return;
     }
     
-    const [rows] = await db.query('SELECT * FROM users WHERE nomor = ?', [senderId]);
+    const [rows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ?', [senderId]);
     if (!rows.length) {
         await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk memulai petualanganmu!');
         return;
@@ -130,6 +139,7 @@ async function startHunt(senderId, chat) {
     await chat.sendMessage(
         `⚔️ *BATTLE START!* [Tier F]\n\n` +
         `${formatMonsterStatus(monster, monsterHp)}\n\n` +
+        `${formatMonsterSkill(monster)}` +
         `Kamu bertemu *${monster.name}* ${monster.emoji}!\n` +
         `Tipe: ${monster.type} | DMG: ${monster.damageType === 'physical' ? 'Fisik' : 'Sihir'}\n\n` +
         `${formatPlayerStatus(player)}\n\n` +

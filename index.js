@@ -80,7 +80,7 @@ async function startBot() {
                 'skill', 'skills', 'use', 'hunt', 'attack', 'flee',
                 'item', 'inv', 'addstat', 'statpoint', 'leaderboard', 'lb',
                 'addsysitem', 'addeffect', 'iteminfo', 'items', 'inventory',
-                'equip', 'inequip', 'useitem',
+                'equip', 'inequip', 'useitem', 'redeem', 'addcode',
             ];
 
             // Bungkus msg agar kompatibel dengan handler lama
