@@ -4,7 +4,6 @@ const Rpgformula = require('./rpgformula'); // Import formula RPG
 const { formatSkillList, useSkill } = require('./RpgClassSkill');
 const { startHunt, doAttack, doSkill, doFlee } = require('./battle');
 const RpgClassSkill = require('./RpgClassSkill');
-const { getInventory, formatInventory } = require('./Inventory');
 const dbitem = require('./dbitem');
 const { checkCooldown } = require ('./cd')
 const { redeemCode, createCode } = require("./Redeem");

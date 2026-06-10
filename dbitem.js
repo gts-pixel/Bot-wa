@@ -113,8 +113,8 @@ function parseArgs(str) {
  
 async function getItemByKey(itemKey) {
     const [rows] = await db.query(
-        'SELECT i.*, GROUP_CONCAT(e.stat, ":", e.value, ":", e.value_mode SEPARATOR "|") as effects FROM rpg_items i LEFT JOIN rpg_item_effects e ON i.id = e.item_id WHERE i.item_key = ? GROUP BY i.id',
-        [itemKey]
+        'SELECT i.*, GROUP_CONCAT(e.stat, ":", e.value, ":", e.value_mode SEPARATOR "|") as effects FROM rpg_items i LEFT JOIN rpg_item_effects e ON i.id = e.item_id WHERE i.item_key = ? OR i.name = ? GROUP BY i.id',
+        [itemKey, itemKey]
     );
     return rows[0] || null;
 }
@@ -338,7 +338,7 @@ async function handleItems(chat, argsStr) {
     if (rarity && VALID_RARITIES.includes(rarity)) {
         query += ' AND rarity = ?'; vals.push(rarity);
     }
-    query += ' ORDER BY tier, rarity, name LIMIT 20';
+    query += ' ORDER BY tier, rarity, name LIMIT 100';
  
     const [rows] = await db.query(query, vals);
     if (!rows.length) return chat.sendMessage('❌ Tidak ada item ditemukan.');

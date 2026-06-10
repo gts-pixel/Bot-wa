@@ -41,8 +41,8 @@ const TIER_F_MONSTERS = {
             xp   : 20,
             gold : { min: 5, max: 12 },
             drops: [
-                { item: 'Wolf Pelt',      rate: 0.80 },
-                { item: 'Claw Fragment',  rate: 0.40 },
+                { item: 'wolf_pelt',     rate: 0.80 },
+                { item: 'claw_fragment', rate: 0.40 },
             ],
         },
         skill: {
@@ -74,8 +74,8 @@ const TIER_F_MONSTERS = {
             xp   : 16,
             gold : { min: 4, max: 9 },
             drops: [
-                { item: 'Fox Tail', rate: 0.75 },
-                { item: 'Soft Fur', rate: 0.50 },
+                { item: 'fox_tail', rate: 0.75 },
+                { item: 'soft_fur', rate: 0.50 },
             ],
         },
         skill: {
@@ -107,8 +107,8 @@ const TIER_F_MONSTERS = {
             xp   : 14,
             gold : { min: 4, max: 12 },
             drops: [
-                { item: 'Silk Thread', rate: 0.85 },
-                { item: 'Cocoon Dust', rate: 0.40 },
+                { item: 'silk_thread', rate: 0.85 },
+                { item: 'cocoon_dust', rate: 0.40 },
             ],
         },
         skill: {
@@ -142,8 +142,8 @@ const TIER_F_MONSTERS = {
             xp   : 18,
             gold : { min: 6, max: 15 },
             drops: [
-                { item: 'Raccoon Mask', rate: 0.50 },
-                { item: 'Stolen Coin',  rate: 0.65 },
+                { item: 'raccoon_mask', rate: 0.50 },
+                { item: 'stolen_coin',  rate: 0.65 },
             ],
         },
         skill: {
@@ -177,8 +177,8 @@ const TIER_F_MONSTERS = {
             xp   : 15,
             gold : { min: 2, max: 7 },
             drops: [
-                { item: 'Bat Wing',   rate: 0.80 },
-                { item: 'Echo Stone', rate: 0.25 },
+                { item: 'bat_wing',   rate: 0.80 },
+                { item: 'echo_stone', rate: 0.25 },
             ],
         },
         skill: {
@@ -212,9 +212,9 @@ const TIER_F_MONSTERS = {
             xp   : 18,
             gold : { min: 4, max: 10 },
             drops: [
-                { item: 'Spider Silk',  rate: 0.75 },
-                { item: 'Venom Gland',  rate: 0.45 },
-                { item: 'Spider Eye',   rate: 0.30 },
+                { item: 'spider_silk',  rate: 0.75 },
+                { item: 'venom_gland',  rate: 0.45 },
+                { item: 'spider_eye',   rate: 0.30 },
             ],
         },
         skill: {
@@ -239,7 +239,7 @@ const TIER_F_MONSTERS = {
             agi :  4,
             int :  8,
             dex :  8,
-            def : 26, // +4 doang
+            def : 44,
             vit : 24,
             wis :  6,
             luk :  8,
@@ -248,8 +248,8 @@ const TIER_F_MONSTERS = {
             xp   : 22,
             gold : { min: 8, max: 18 },
             drops: [
-                { item: 'Pebble Core', rate: 0.60 },
-                { item: 'Stone Dust',  rate: 0.80 },
+                { item: 'pebble_core', rate: 0.60 },
+                { item: 'stone_dust',  rate: 0.80 },
             ],
         },
         skill: {
@@ -286,8 +286,8 @@ const TIER_F_MONSTERS = {
             xp   : 15,
             gold : { min: 3, max: 8 },
             drops: [
-                { item: 'Ant Mandible', rate: 0.70 },
-                { item: 'Formic Acid',  rate: 0.45 },
+                { item: 'ant_mandible', rate: 0.70 },
+                { item: 'formic_acid',  rate: 0.45 },
             ],
         },
         skill: {
@@ -321,8 +321,8 @@ const TIER_F_MONSTERS = {
             xp   : 16,
             gold : { min: 3, max: 8 },
             drops: [
-                { item: 'Toad Slime', rate: 0.75 },
-                { item: 'Mud Gem',    rate: 0.20 },
+                { item: 'toad_slime', rate: 0.75 },
+                { item: 'mud_gem',    rate: 0.20 },
             ],
         },
         skill: {
@@ -356,8 +356,8 @@ const TIER_F_MONSTERS = {
             xp   : 14,
             gold : { min: 2, max: 6 },
             drops: [
-                { item: 'Proboscis Needle', rate: 0.60 },
-                { item: 'Blood Sac',        rate: 0.45 },
+                { item: 'proboscis_needle', rate: 0.60 },
+                { item: 'blood_sac',        rate: 0.45 },
             ],
         },
         skill: {
@@ -389,8 +389,8 @@ const TIER_F_MONSTERS = {
             xp   : 16,
             gold : { min: 3, max: 8 },
             drops: [
-                { item: 'Rat Fur',     rate: 0.80 },
-                { item: 'Bone Shard',  rate: 0.35 },
+                { item: 'rat_fur',     rate: 0.80 },
+                { item: 'bone_shard',  rate: 0.35 },
             ],
         },
         skill: {
@@ -422,8 +422,8 @@ const TIER_F_MONSTERS = {
             xp   : 13,
             gold : { min: 2, max: 5 },
             drops: [
-                { item: 'Spore Dust',    rate: 0.85 },
-                { item: 'Mushroom Cap',  rate: 0.55 },
+                { item: 'spore_dust',    rate: 0.85 },
+                { item: 'mushroom_cap',  rate: 0.55 },
             ],
         },
         skill: {
@@ -457,8 +457,8 @@ const TIER_F_MONSTERS = {
             xp   : 22,
             gold : { min: 6, max: 14 },
             drops: [
-                { item: 'Boar Tusk',   rate: 0.60 },
-                { item: 'Thick Hide',  rate: 0.70 },
+                { item: 'boar_tusk',   rate: 0.60 },
+                { item: 'thick_hide',  rate: 0.70 },
             ],
         },
         skill: {
@@ -492,8 +492,8 @@ const TIER_F_MONSTERS = {
             xp   : 16,
             gold : { min: 3, max: 8 },
             drops: [
-                { item: 'Thorn Spike', rate: 0.65 },
-                { item: 'Wisp Dust',   rate: 0.50 },
+                { item: 'thorn_spike', rate: 0.65 },
+                { item: 'wisp_dust',   rate: 0.50 },
             ],
         },
         skill: {
@@ -525,9 +525,9 @@ const TIER_F_MONSTERS = {
             xp   : 20,
             gold : { min: 5, max: 12 },
             drops: [
-                { item: 'Bone Fragment', rate: 0.85 },
-                { item: 'Rusted Sword',  rate: 0.25 },
-                { item: 'Grave Dust',    rate: 0.55 },
+                { item: 'bone_fragment', rate: 0.85 },
+                { item: 'rusted_sword',  rate: 0.25 },
+                { item: 'grave_dust',    rate: 0.55 },
             ],
         },
         skill: {

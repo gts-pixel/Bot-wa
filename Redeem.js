@@ -99,8 +99,8 @@ async function redeemCode(nomor, code) {
     }
 
     if (c.reward_item && c.reward_item_qty > 0) {
-        const { addItem } = require('./Inventory');
-        await addItem(nomor, c.reward_item, c.reward_item_qty);
+        const { addItemToInventory } = require('./dbitem');
+        await addItemToInventory(nomor, c.reward_item, c.reward_item_qty);
         rewards.push(`📦 *${c.reward_item}* ×${c.reward_item_qty}`);
     }
 

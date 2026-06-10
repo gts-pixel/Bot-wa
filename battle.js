@@ -413,6 +413,7 @@ async function endBattle(senderId, chat, player, result, logs) {
         const expGain = monster.reward.xp;
         const goldGain = rollGold(monster.reward.gold);
         const drops = rollDrops(monster.reward.drops);
+        const { addItemToInventory } = require('./dbitem');
 
         // Hitung level up
         const newExp = player.exp + expGain;
@@ -433,6 +434,12 @@ async function endBattle(senderId, chat, player, result, logs) {
                 'UPDATE rpg_players SET exp = ?, gold = gold + ? WHERE nomor = ?',
                 [newExp, goldGain, senderId]
             );
+        }
+
+        if (drops.length > 0) {
+            for (const itemName of drops) {
+                await addItemToInventory(senderId, itemName, 1);
+            }
         }
 
         const dropMsg = drops.length ? `\n🎁 Drop: ${drops.join(', ')}` : '\n🎁 Tidak ada drop.';
