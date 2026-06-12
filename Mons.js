@@ -165,7 +165,7 @@ const TIER_F_MONSTERS = {
         tier       : 'F',
         stats: {
             str : 16,
-            agi : 28, // +4 doang
+            agi : 48, 
             int :  8,
             dex : 32,
             def :  6,
@@ -444,7 +444,7 @@ const TIER_F_MONSTERS = {
         damageType : 'physical',
         tier       : 'F',
         stats: {
-            str : 28, // +10 ajah
+            str : 36,
             agi : 24,
             int :  6,
             dex : 16,
