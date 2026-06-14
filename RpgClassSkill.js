@@ -15,6 +15,7 @@ const SKILL = {
             key: '1',
             emoji: '🛡️',
             mpCost: 15,
+            cooldownTurns: 2,
             desc: 'Hantam musuh dengan perisai. DMG = STR × 3 + DEF × 1.5',
             effect: (p) => {
                 const dmg = Math.floor(p.strength * 3 + p.defense * 1.5);
@@ -26,6 +27,7 @@ const SKILL = {
             key: '2',
             emoji: '💪',
             mpCost: 20,
+            cooldownTurns: 3,
             desc: 'Pulihkan HP = VIT × 5 + DEF × 2',
             effect: (p) => {
                 const heal = Math.floor(p.vitality * 5 + p.defense * 2);
@@ -37,6 +39,7 @@ const SKILL = {
             key: '3',
             emoji: '⚔️',
             mpCost: 30,
+            cooldownTurns: 4,
             desc: 'Serang 3x. Total DMG = STR × 7',
             effect: (p) => {
                 const dmg = Math.floor(p.strength * 7);
@@ -50,6 +53,7 @@ const SKILL = {
             key: '1',
             emoji: '✨',
             mpCost: 20,
+            cooldownTurns: 2,
             desc: 'Pulihkan HP = VIT × 6 + WIS × 3',
             effect: (p) => {
                 const heal = Math.floor(p.vitality * 6 + p.wisdom * 3);
@@ -61,9 +65,10 @@ const SKILL = {
             key: '2',
             emoji: '⚡',
             mpCost: 25,
-            desc: 'DMG = STR × 2.5 + WIS × 2',
+            cooldownTurns: 3,
+            desc: 'DMG = STR × 3 + WIS × 2.5',
             effect: (p) => {
-                const dmg = Math.floor(p.strength * 2.5 + p.wisdom * 2);
+                const dmg = Math.floor(p.strength * 3 + p.wisdom * 2.5);
                 return { damage: dmg, desc: `⚡ *Divine Strike!*\nSerangan suci menghantam musuh.\nDMG: *${dmg}*` };
             }
         },
@@ -72,6 +77,7 @@ const SKILL = {
             key: '3',
             emoji: '🛡️',
             mpCost: 35,
+            cooldownTurns: 4,
             desc: 'Heal HP = DEF × 4 + VIT × 4',
             effect: (p) => {
                 const heal = Math.floor(p.defense * 4 + p.vitality * 4);
@@ -85,6 +91,7 @@ const SKILL = {
             key: '1',
             emoji: '🪓',
             mpCost: 10,
+            cooldownTurns: 2,
             desc: 'DMG tinggi = STR × 4.25. Kurangi DEF diri sendiri 2 turn.',
             effect: (p) => {
                 const dmg = Math.floor(p.strength * 4.25);
@@ -96,6 +103,7 @@ const SKILL = {
             key: '2',
             emoji: '🩸',
             mpCost: 20,
+            cooldownTurns: 3,
             desc: 'DMG = STR × 4 + AGI × 2. Steal HP 20% dari DMG.',
             effect: (p) => {
                 const dmg = Math.floor(p.strength * 4 + p.agility * 2);
@@ -108,10 +116,11 @@ const SKILL = {
             key: '3',
             emoji: '💢',
             mpCost: 40,
-            desc: 'DMG = STR × 8. Resiko: HP berkurang 10%.',
+            cooldownTurns: 5,
+            desc: 'DMG = STR × 7.5. Resiko: HP berkurang 20%.',
             effect: (p) => {
-                const dmg = Math.floor(p.strength * 8);
-                const hpCost = Math.floor(p.hp * 0.1);
+                const dmg = Math.floor(p.strength * 7.5);
+                const hpCost = Math.floor(p.hp * 0.2);
                 return { damage: dmg, hpCost, desc: `💢 *Berserk Mode!*\nKamu mengamuk tanpa kendali!\nDMG: *${dmg}* | HP Berkurang: *-${hpCost}*` };
             }
         },
@@ -122,6 +131,7 @@ const SKILL = {
             key: '1',
             emoji: '🔮',
             mpCost: 20,
+            cooldownTurns: 2,
             desc: 'DMG = INT × 3 + WIS × 2',
             effect: (p) => {
                 const dmg = Math.floor(p.intelligence * 3 + p.wisdom * 2);
@@ -133,6 +143,7 @@ const SKILL = {
             key: '2',
             emoji: '💠',
             mpCost: 0,
+            cooldownTurns: 3,
             desc: 'Regenerasi MP = WIS × 3 + INT × 1',
             effect: (p) => {
                 const regen = Math.floor(p.wisdom * 3 + p.intelligence * 1);
@@ -144,6 +155,7 @@ const SKILL = {
             key: '3',
             emoji: '☄️',
             mpCost: 50,
+            cooldownTurns: 5,
             desc: 'DMG = INT × 6 + WIS × 4. Skill paling kuat.',
             effect: (p) => {
                 const dmg = Math.floor(p.intelligence * 6 + p.wisdom * 4);
@@ -157,6 +169,7 @@ const SKILL = {
             key: '1',
             emoji: '🔥',
             mpCost: 20,
+            cooldownTurns: 2,
             desc: 'DMG = INT × 2.5 + LUK × 1',
             effect: (p) => {
                 const dmg = Math.floor(p.intelligence * 2.5 + p.luck * 1);
@@ -168,6 +181,7 @@ const SKILL = {
             key: '2',
             emoji: '❄️',
             mpCost: 25,
+            cooldownTurns: 3,
             desc: 'DMG = INT × 2 + WIS × 1.5. Musuh freeze 1 turn.',
             effect: (p) => {
                 const dmg = Math.floor(p.intelligence * 2 + p.wisdom * 1.5);
@@ -179,6 +193,7 @@ const SKILL = {
             key: '3',
             emoji: '🌌',
             mpCost: 40,
+            cooldownTurns: 4,
             desc: 'DMG = INT × 4 + WIS × 2 + LUK × 1',
             effect: (p) => {
                 const dmg = Math.floor(p.intelligence * 4 + p.wisdom * 2 + p.luck * 1);
@@ -192,6 +207,7 @@ const SKILL = {
             key: '1',
             emoji: '🗡️',
             mpCost: 15,
+            cooldownTurns: 2,
             desc: 'DMG = DEX × 3 + AGI × 2. Crit otomatis jika hit.',
             effect: (p) => {
                 const base = Math.floor(p.dexterity * 3 + p.agility * 2);
@@ -204,6 +220,7 @@ const SKILL = {
             key: '2',
             emoji: '🌑',
             mpCost: 20,
+            cooldownTurns: 3,
             desc: 'Dodge 100% serangan berikutnya + DMG = AGI × 3',
             effect: (p) => {
                 const dmg = Math.floor(p.agility * 3);
@@ -215,6 +232,7 @@ const SKILL = {
             key: '3',
             emoji: '☠️',
             mpCost: 30,
+            cooldownTurns: 4,
             desc: 'DMG = DEX × 4 + AGI × 3. Efek racun.',
             effect: (p) => {
                 const dmg = Math.floor(p.dexterity * 4 + p.agility * 3);
@@ -228,6 +246,7 @@ const SKILL = {
             key: '1',
             emoji: '👻',
             mpCost: 15,
+            cooldownTurns: 3,
             desc: 'DMG = AGI × 2.5 + DEX × 2',
             effect: (p) => {
                 const dmg = Math.floor(p.agility * 2.5 + p.dexterity * 2);
@@ -239,6 +258,7 @@ const SKILL = {
             key: '2',
             emoji: '🌫️',
             mpCost: 25,
+            cooldownTurns: 3,
             desc: 'Heal HP = LUK × 3 + AGI × 2',
             effect: (p) => {
                 const heal = Math.floor(p.luck * 3 + p.agility * 2);
@@ -250,6 +270,7 @@ const SKILL = {
             key: '3',
             emoji: '💜',
             mpCost: 35,
+            cooldownTurns: 5,
             desc: 'DMG = DEX × 3 + LUK × 3. Steal HP 30%.',
             effect: (p) => {
                 const dmg = Math.floor(p.dexterity * 3 + p.luck * 3);
@@ -264,6 +285,7 @@ const SKILL = {
             key: '1',
             emoji: '🏹',
             mpCost: 10,
+            cooldownTurns: 1,
             desc: 'DMG = DEX × 2.5 + AGI × 1.5',
             effect: (p) => {
                 const dmg = Math.floor(p.dexterity * 2.5 + p.agility * 1.5);
@@ -275,6 +297,7 @@ const SKILL = {
             key: '2',
             emoji: '🌧️',
             mpCost: 25,
+            cooldownTurns: 3,
             desc: 'DMG = DEX × 4 + AGI × 2. Serang 5 panah.',
             effect: (p) => {
                 const dmg = Math.floor(p.dexterity * 4 + p.agility * 2);
@@ -286,6 +309,7 @@ const SKILL = {
             key: '3',
             emoji: '💥',
             mpCost: 35,
+            cooldownTurns: 4,
             desc: 'DMG = DEX × 5 + AGI × 3. Tembus armor.',
             effect: (p) => {
                 const dmg = Math.floor(p.dexterity * 5 + p.agility * 3);
@@ -299,6 +323,7 @@ const SKILL = {
             key: '1',
             emoji: '🦅',
             mpCost: 15,
+            cooldownTurns: 2,
             desc: 'DMG = DEX × 3 + LUK × 2. Hit rate +99%.',
             effect: (p) => {
                 const dmg = Math.floor(p.dexterity * 3 + p.luck * 2);
@@ -310,6 +335,7 @@ const SKILL = {
             key: '2',
             emoji: '🍀',
             mpCost: 20,
+            cooldownTurns: 3,
             desc: 'DMG = LUK × 5. Damage acak x1.0–x2.0.',
             effect: (p) => {
                 const multiplier = 1 + Math.random();
@@ -322,6 +348,7 @@ const SKILL = {
             key: '3',
             emoji: '🎯',
             mpCost: 45,
+            cooldownTurns: 5,
             desc: 'DMG = DEX × 7 + LUK × 3. Selalu crit.',
             effect: (p) => {
                 const base = Math.floor(p.dexterity * 7 + p.luck * 3);
@@ -336,6 +363,7 @@ const SKILL = {
             key: '1',
             emoji: '🗿',
             mpCost: 25,
+            cooldownTurns: 3,
             desc: 'DMG = INT × 2 + WIS × 2. Golem menyerang.',
             effect: (p) => {
                 const dmg = Math.floor(p.intelligence * 2 + p.wisdom * 2);
@@ -347,6 +375,7 @@ const SKILL = {
             key: '2',
             emoji: '🌿',
             mpCost: 20,
+            cooldownTurns: 3,
             desc: 'Heal HP = WIS × 5 + INT × 2',
             effect: (p) => {
                 const heal = Math.floor(p.wisdom * 5 + p.intelligence * 2);
@@ -358,6 +387,7 @@ const SKILL = {
             key: '3',
             emoji: '🐉',
             mpCost: 50,
+            cooldownTurns: 5,
             desc: 'DMG = INT × 5 + WIS × 3 + LUK × 2.',
             effect: (p) => {
                 const dmg = Math.floor(p.intelligence * 5 + p.wisdom * 3 + p.luck * 2);

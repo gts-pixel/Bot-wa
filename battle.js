@@ -2,7 +2,7 @@ const db = require('./db').promise();
 const { TIER_F_MONSTERS, calcMonsterDerived, rollGold, rollDrops } = require('./Mons');
 const { findSkill } = require('./RpgClassSkill');
 const Rpgformula = require('./Rpgformula');
-
+const { getSkillCooldown, setSkillCooldown, decrementSkillCooldowns, formatSkillCooldowns } = require('./CDSkill');
 const activeBattles = {};
 
 function getRandomMonsterTierF() {
@@ -128,6 +128,7 @@ async function startHunt(senderId, chat) {
     const monsterMp = monster.derived.maxMP;
 
     activeBattles[senderId] = {
+        skillCooldowns: {}, // inisiasi cd skill kosong { skillKey: turnRemaining }
         monster,
         monsterHp,
         monsterMp,
@@ -230,6 +231,7 @@ async function doAttack(senderId, chat) {
     }
 
     battle.turn++;
+    decrementSkillCooldowns(battle); // Kurangi cooldown skill tiap turn
     const updatedPlayer = { ...player, hp: newPlayerHp, mp: newPlayerMp };
 
     await chat.sendMessage(
@@ -238,6 +240,7 @@ async function doAttack(senderId, chat) {
         `Turn *${battle.turn}*\n` +
         `${formatMonsterStatus(monster, battle.monsterHp)}\n` +
         `${formatPlayerStatus(updatedPlayer)}\n\n` +
+        `${formatPlayerStatus(updatedPlayer)}${formatSkillCooldowns(battle)}\n\n` +
         `*.attack* | *.use [1/2/3]* | *.flee*`
     );
 }
@@ -267,6 +270,16 @@ async function doSkill(senderId, skillKey, chat) {
         await chat.sendMessage(`❌ MP tidak cukup! Butuh *${skill.mpCost} MP*, kamu punya *${player.mp} MP*.`);
         return;
     }
+
+    // Cek skill cooldown
+    const cdRemaining = getSkillCooldown(battle, skillKey);
+    if (cdRemaining > 0) {
+        await chat.sendMessage(`⏳ *${skill.name}* masih cooldown! Bisa dipakai lagi dalam *${cdRemaining} turn*.`);
+        return;
+    }
+
+    // Set cooldown setelah dipakai
+    setSkillCooldown(battle, skill, skillKey);
 
     // ── PLAYER SKILL TURN ──
     const result = skill.effect(player);
@@ -352,6 +365,7 @@ async function doSkill(senderId, skillKey, chat) {
     }
 
     battle.turn++;
+    decrementSkillCooldowns(battle);
     const updatedPlayer = { ...player, hp: newPlayerHp, mp: newPlayerMp };
 
     await chat.sendMessage(
@@ -360,6 +374,7 @@ async function doSkill(senderId, skillKey, chat) {
         `Turn *${battle.turn}*\n` +
         `${formatMonsterStatus(monster, battle.monsterHp)}\n` +
         `${formatPlayerStatus(updatedPlayer)}\n\n` +
+        `${formatPlayerStatus(updatedPlayer)}${formatSkillCooldowns(battle)}\n\n` +
         `*.attack* | *.use [1/2/3]* | *.flee*`
     );
 }

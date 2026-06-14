@@ -112,8 +112,11 @@ module.exports = async (sock, message) => {
                 break;
 
             case 'update':
-                await chat.sendMessage(' - Peningkatan Stat monster sebesar 100% dan peningkatan sedikit pendapatan exp dari monster yang dikalahkan\n');
-                await chat.sendMessage(' - Penambahan Fitur .redeem')
+                await chat.sendMessage(
+                    ' - Peningkatan Stat monster sebesar 100% dan peningkatan sedikit pendapatan exp dari monster yang dikalahkan\n' +
+                    ' - Penambahan fitur cooldown untuk skill (lihat .skill untuk info cooldown)\n' +
+                    ' - Perbaikan bug kecil dan peningkatan performa\n' 
+                );
                 break;
 
             case 'kosong':
