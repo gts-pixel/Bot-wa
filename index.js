@@ -46,10 +46,15 @@ async function startBot() {
     });
 
     // ── QR ──
-    sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-        if (qr) {
-            console.log('Scan QR ini:');
-            qrcode.generate(qr, { small: true });
+    sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+        if (qr && NOMOR_WA) {
+            try {
+                const code = await sock.requestPairingCode(NOMOR_WA);
+                console.log(`\n🔑 Pairing Code: ${code}`);
+                console.log(`Masukkan kode ini di WA → Linked Devices → Link a Device → Link with phone number\n`);
+            } catch (e) {
+                console.error('Gagal minta pairing code:', e.message);
+            }
         }
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
