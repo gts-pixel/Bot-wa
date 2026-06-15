@@ -4,6 +4,7 @@ const qrcode = require('qrcode-terminal');
 const msgg = require('./msgg');
 const rpg = require('./rpg');
 require('dotenv').config();
+const readline = require('readline');
 
 const conn = require('./db');
 conn.query('SELECT 1', (err) => {
@@ -21,6 +22,17 @@ const GRUP_IZIN = [
 async function startBot() {
     const { version } = await fetchLatestBaileysVersion();
     const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
+
+    let NOMOR_WA = '';
+        if (!state.creds.registered) {
+            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+            NOMOR_WA = await new Promise(resolve => {
+                rl.question('Masukkan nomor WA bot (contoh: 6281234567890): ', ans => {
+                    rl.close();
+                    resolve(ans.trim());
+                });
+            });
+        }
 
     const sock = makeWASocket({
         version,
