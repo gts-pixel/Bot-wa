@@ -38,7 +38,7 @@ async function startBot() {
         version,
         auth: state,
         logger: pino({ level: 'silent'}),
-        printQRInTerminal: true,
+        printQRInTerminal: false,
         shouldIgnoreJid: jid => jid.endsWith('@lid'),
         getMessage: async (key) => {
             return {conversation: ''};
@@ -47,15 +47,15 @@ async function startBot() {
 
     // ── QR ──
     sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-        // if (qr) {
-        //     console.log('Scan QR ini:');
-        //     qrcode.generate(qr, { small: true });
-        // }
-        // if (connection === 'close') {
-        //     const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-        //     console.log('Koneksi terputus, reconnect:', shouldReconnect);
-        //     if (shouldReconnect) startBot();
-        // }
+        if (qr) {
+            console.log('Scan QR ini:');
+            qrcode.generate(qr, { small: true });
+        }
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log('Koneksi terputus, reconnect:', shouldReconnect);
+            if (shouldReconnect) startBot();
+        }
         if (connection === 'open') {
             console.log('✅ Bot siap!');
         }
