@@ -1,6 +1,6 @@
 const db = require('./db').promise();
 const { TIER_F_MONSTERS, calcMonsterDerived, rollGold, rollDrops } = require('./Mons');
-const { findSkill } = require('./RpgClassSkill');
+const { findSkillBySlot } = require('./SkillSlot');
 const Rpgformula = require('./Rpgformula');
 const { getSkillCooldown, setSkillCooldown, decrementSkillCooldowns, formatSkillCooldowns } = require('./CDSkill');
 const activeBattles = {};
@@ -260,9 +260,16 @@ async function doSkill(senderId, skillKey, chat) {
     const { monster } = battle;
     let logs = [];
 
-    const skill = findSkill(player.class, skillKey);
+    // ★ Skill slot system — .use 1/2/3/4 sesuai slot aktif player
+    const slotNum = parseInt(skillKey);
+    if (isNaN(slotNum) || slotNum < 1 || slotNum > 4) {
+        await chat.sendMessage('❌ Gunakan *.use [1-4]* sesuai slot skill aktifmu.\nKetik *.myskills* untuk lihat slot aktif.');
+        return;
+    }
+
+    const skill = await findSkillBySlot(senderId, player.class, slotNum);
     if (!skill) {
-        await chat.sendMessage(`❌ Skill *${skillKey}* tidak ditemukan.\nKetik *.skill* untuk lihat skill kamu.`);
+        await chat.sendMessage(`❌ Slot *${slotNum}* kosong!\nEquip skill dulu dengan *.equipskill [nama skill]*\nKetik *.skillpool* untuk lihat skill yang tersedia.`);
         return;
     }
 
@@ -271,15 +278,16 @@ async function doSkill(senderId, skillKey, chat) {
         return;
     }
 
-    // Cek skill cooldown
-    const cdRemaining = getSkillCooldown(battle, skillKey);
+    // Cek skill cooldown (pakai slotNum sebagai key)
+    const cdKey = String(slotNum);
+    const cdRemaining = getSkillCooldown(battle, cdKey);
     if (cdRemaining > 0) {
-        await chat.sendMessage(`⏳ *${skill.name}* masih cooldown! Bisa dipakai lagi dalam *${cdRemaining} turn*.`);
+        await chat.sendMessage(`⏳ *${skill.name}* (slot ${slotNum}) masih cooldown! Bisa dipakai lagi dalam *${cdRemaining} turn*.`);
         return;
     }
 
     // Set cooldown setelah dipakai
-    setSkillCooldown(battle, skill, skillKey);
+    setSkillCooldown(battle, skill, cdKey);
 
     // ── PLAYER SKILL TURN ──
     const result = skill.effect(player);
@@ -443,7 +451,15 @@ async function endBattle(senderId, chat, player, result, logs) {
                 'UPDATE rpg_players SET level = ?, exp = ?, gold = gold + ?, stat_point = stat_point + ? WHERE nomor = ?',
                 [newLevel, newExp - expNeeded, goldGain, statPointGain, senderId]
             );
-            levelUpMsg = `\n\n🎉 *LEVEL UP!* ${player.level} → *${newLevel}*\n+${statPointGain} Stat Point!`;
+
+            const { getSkillPool } = require('./SkillPool');
+            const pool = getSkillPool(player.class);
+            const newSkills = pool.filter(s => s.unlockLevel === newLevel);
+            const newSkillMsg = newSkills.length
+                ? `\n🔓 Skill baru terbuka: ${newSkills.map(s => `${s.emoji} *${s.name}*`).join(', ')}!\nKetik *.skillpool* untuk equip.`
+                : '';
+
+            levelUpMsg = `\n\n🎉 *LEVEL UP!* ${player.level} → *${newLevel}*\n+${statPointGain} Stat Point!` + newSkillMsg;
         } else {
             await db.query(
                 'UPDATE rpg_players SET exp = ?, gold = gold + ? WHERE nomor = ?',

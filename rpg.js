@@ -7,6 +7,7 @@ const RpgClassSkill = require('./RpgClassSkill');
 const dbitem = require('./dbitem');
 const { checkCooldown } = require ('./cd')
 const { redeemCode, createCode } = require("./Redeem");
+const SkillSlot = require('./SkillSlot');
 const OWNER_NUMBERS = (process.env.OWNER_NUMBER || '')
     .split(',')
     .map(n => n.trim().replace(/@.*$/, ''))
@@ -378,7 +379,14 @@ module.exports = async (client, message) => {
                     }
                     try {
                         await setPlayerClass(senderId, className);
-                        await chat.sendMessage(`✅ Class kamu berhasil diubah menjadi *${className}*.`);
+                        // Reset skill slots dan set default 4 skill pertama dari class baru
+                        await SkillSlot.clearAllSlots(senderId);
+                        await SkillSlot.setDefaultSlots(senderId, className);
+                        await chat.sendMessage(
+                            `✅ Class kamu berhasil diubah menjadi *${className}*!\n\n` +
+                            `🎮 Skill slot 1-4 sudah di-reset ke default skill class *${className}*.\n` +
+                            `Ketik *.myskills* untuk lihat slot aktifmu atau *.skillpool* untuk lihat semua skill yang bisa di-equip.`
+                        );
                     } catch (error) {
                         await chat.sendMessage('❌ Terjadi kesalahan saat mengubah class. Coba lagi nanti.');
                         console.error('Change class error:', error);
@@ -437,45 +445,113 @@ module.exports = async (client, message) => {
                     console.error("Profile error:", error);
                 }
                 break;
+            // ── .myskills — lihat slot skill aktif (1-4) ──
+            case "myskills":
             case "skill": {
-                // Lihat daftar skill milik class player
                 const [rows] = await db.query('SELECT class FROM rpg_players WHERE nomor = ?', [senderId]);
-                if (rows.length === 0) {
+                if (!rows.length) {
                     await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
                     break;
                 }
-                const playerClass = rows[0].class;
-                await chat.sendMessage(
-                    `📖 *Skill List — ${playerClass}*\n\n` +
-                    formatSkillList(playerClass) +
-                    `\n\nGunakan *.use [1/2/3]* untuk memakai skill.\nContoh: *.use 2*`
-                );
+                const out = await SkillSlot.formatActiveSlots(senderId, rows[0].class);
+                await chat.sendMessage(out);
                 break;
             }
 
-            case "use": {
-                // Pakai skill: .use <skillkey>
-                if (!args) {
-                    await chat.sendMessage('❌ Format salah. Gunakan: *.use [nama skill]*\nContoh: *.use backstab*\n\nKetik *.skill* untuk melihat skill kamu.');
+            // ── .skillpool — lihat semua skill yang bisa di-equip ──
+            case "skillpool": {
+                const [rows] = await db.query('SELECT class FROM rpg_players WHERE nomor = ?', [senderId]);
+                if (!rows.length) {
+                    await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
                     break;
                 }
-                const skillKey = args.replace(/\s+/g, '').toLowerCase();
+                await chat.sendMessage(SkillSlot.formatSkillPool(rows[0].class));
+                break;
+            }
 
-                // Cek apakah sedang dalam battle → pakai doSkill
+            // ── .equipskill [nama skill] [slot opsional] ──
+            case "equipskill": {
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.equipskill [nama skill]* atau *.equipskill [nama skill] [1-4]*\nContoh: *.equipskill Fireball* atau *.equipskill Fireball 2*');
+                    break;
+                }
+                const [rows] = await db.query('SELECT class, level FROM rpg_players WHERE nomor = ?', [senderId]);
+                if (!rows.length) {
+                    await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
+                    break;
+                }
+                // Parsing: "fireball 2" → skill = "fireball", slot = 2
+                const parts = args.trim().split(/\s+/);
+                const maybeSlot = parseInt(parts[parts.length - 1]);
+                let skillName, targetSlot;
+                if (!isNaN(maybeSlot) && maybeSlot >= 1 && maybeSlot <= 4) {
+                    targetSlot = maybeSlot;
+                    skillName = parts.slice(0, -1).join(' ');
+                } else {
+                    targetSlot = null;
+                    skillName = parts.join(' ');
+                }
+                const result = await SkillSlot.equipSkill(senderId, rows[0].class, skillName, targetSlot, rows[0].level);
+                await chat.sendMessage(result.message);
+                break;
+            }
+
+            // ── .unequipskill [1-4] ──
+            case "unequipskill": {
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.unequipskill [1-4]*\nContoh: *.unequipskill 3*');
+                    break;
+                }
+                const [rows] = await db.query('SELECT class FROM rpg_players WHERE nomor = ?', [senderId]);
+                if (!rows.length) {
+                    await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
+                    break;
+                }
+                const result = await SkillSlot.unequipSkill(senderId, rows[0].class, args.trim());
+                await chat.sendMessage(result.message);
+                break;
+            }
+
+            // ── .use [1-4] — pakai skill slot saat battle ──
+            case "use": {
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.use [1-4]*\nContoh: *.use 2*\n\nKetik *.myskills* untuk lihat slot aktifmu.');
+                    break;
+                }
+                const skillKey = args.trim();
                 const { activeBattles } = require('./battle');
-                // Note: export activeBattles dari battle.js (lihat patch ② di bawah)
                 if (activeBattles[senderId]) {
                     await doSkill(senderId, skillKey, chat);
                 } else {
-                    // Di luar battle → pakai useSkill biasa (heal/mpregen)
-                    const { useSkill } = require('./RpgClassSkill');
+                    // Di luar battle — jalankan heal/mpRegen skill langsung
                     const [rows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ?', [senderId]);
-                    if (rows.length === 0) {
+                    if (!rows.length) {
                         await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
                         break;
                     }
-                    const result = await useSkill(db, senderId, skillKey, rows[0]);
-                    await chat.sendMessage(result.message);
+                    const slotNum = parseInt(skillKey);
+                    if (isNaN(slotNum) || slotNum < 1 || slotNum > 4) {
+                        await chat.sendMessage('❌ Gunakan *.use [1-4]* sesuai nomor slot.\nKetik *.myskills* untuk lihat slot aktifmu.');
+                        break;
+                    }
+                    const player = rows[0];
+                    const skill = await SkillSlot.findSkillBySlot(senderId, player.class, slotNum);
+                    if (!skill) {
+                        await chat.sendMessage(`❌ Slot *${slotNum}* kosong. Equip dulu dengan *.equipskill [nama skill]*`);
+                        break;
+                    }
+                    if (player.mp < skill.mpCost) {
+                        await chat.sendMessage(`❌ MP tidak cukup! Butuh *${skill.mpCost} MP*, kamu punya *${player.mp} MP*.`);
+                        break;
+                    }
+                    const result = skill.effect(player);
+                    let newHp = player.hp;
+                    let newMp = player.mp - skill.mpCost;
+                    if (result.heal) newHp = Math.min(player.max_hp, newHp + result.heal);
+                    if (result.mpRegen) newMp = Math.min(player.max_mp, newMp + result.mpRegen);
+                    if (result.hpCost) newHp = Math.max(1, newHp - result.hpCost);
+                    await db.query('UPDATE rpg_players SET hp = ?, mp = ? WHERE nomor = ?', [newHp, newMp, senderId]);
+                    await chat.sendMessage(result.desc + `\n\n❤️ HP: ${newHp}/${player.max_hp}\n💙 MP: ${newMp}/${player.max_mp}`);
                 }
                 break;
             }
@@ -497,17 +573,16 @@ module.exports = async (client, message) => {
 
             case "skills":
                 try {
-                    const [rows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ?', [senderId]);
-                    if (rows.length === 0) {
+                    const [rows] = await db.query('SELECT class FROM rpg_players WHERE nomor = ?', [senderId]);
+                    if (!rows.length) {
                         await chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.');
                         break;
                     }
-                    const player = rows[0];
-                    const skillsText = RpgClassSkill.formatSkillsForPlayer(player.class, player);
-                    await chat.sendMessage(skillsText);
+                    const out = await SkillSlot.formatActiveSlots(senderId, rows[0].class);
+                    await chat.sendMessage(out);
                 } catch (err) {
-                    console.error('Error fetching skills for player:', err);
-                    await chat.sendMessage('❌ Terjadi kesalahan saat mengambil daftar skill. Coba lagi nanti.');
+                    console.error('Error fetching skills:', err);
+                    await chat.sendMessage('❌ Terjadi kesalahan. Coba lagi nanti.');
                 }
                 break;
             
