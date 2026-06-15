@@ -568,16 +568,16 @@ async function addItemToInventory(playerNomor, itemKey, quantity = 1, source = '
  
     if (item.stackable) {
         // Cek apakah sudah ada di inventory
-        const [existing] = await db.query(
+        const [rows] = await db.query(
             'SELECT * FROM rpg_inventory WHERE player_nomor = ? AND item_id = ?',
             [playerNomor, item.id]
         );
  
-        if (existing.length > 0) {
-            const newQty = Math.min(existing[0].quantity + quantity, item.max_stack);
+        if (rows.length > 0) {
+            const newQty = Math.min(rows[0].quantity + quantity, item.max_stack);
             await db.query(
                 'UPDATE rpg_inventory SET quantity = ? WHERE id = ?',
-                [newQty, existing[0].id]
+                [newQty, rows[0].id]
             );
         } else {
             await db.query(
