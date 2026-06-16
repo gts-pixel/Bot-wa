@@ -202,12 +202,12 @@ async function clearAllSlots(nomor) {
  * Set slot default saat pertama kali pilih class
  * (equip 4 skill pertama dari pool secara otomatis)
  */
-async function setDefaultSlots(nomor, className) {
+async function setDefaultSlots(nomor, className, playerLevel) {
     const pool = getSkillPool(className);
     if (!pool.length) return;
 
-    const unlockedSkills = pool.filter(s => (s.unlockLevel || 1 ) <= playerLevel);
-    const defaultSkills = pool.slice(0, MAX_SLOTS);
+    const unlockedSkills = pool.filter(s => (s.unlockLevel || 1) <= playerLevel);
+    const defaultSkills = unlockedSkills.length ? unlockedSkills.slice(0, MAX_SLOTS) : pool.slice(0, MAX_SLOTS);
     for (let i = 0; i < defaultSkills.length; i++) {
         await db.query(
             `INSERT INTO player_skill_slots (nomor, slot, skill_id, class_name)

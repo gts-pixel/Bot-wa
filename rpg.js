@@ -257,23 +257,45 @@ async function setPlayerClass(nomor, className) {
     if (!classInfo) {
         throw new Error('Class tidak ditemukan');
     }
-    const { stats, derived } = buildPlayerStats(className);
+
+    const [rows] = await db.query(
+        'SELECT class, strength, agility, intelligence, dexterity, defense, vitality, wisdom, luck, hp, mp FROM rpg_players WHERE nomor = ?',
+        [nomor]
+    );
+    if (!rows.length) {
+        throw new Error('Pemain tidak ditemukan');
+    }
+
+    const player = rows[0];
+    const oldClassInfo = CLASS_DATA[player.class] || { bonus: {} };
+    const statKeys = ['strength', 'agility', 'intelligence', 'dexterity', 'defense', 'vitality', 'wisdom', 'luck'];
+
+    const updatedStats = {};
+    for (const key of statKeys) {
+        const baseValue = Math.max((player[key] || 0) - (oldClassInfo.bonus[key] || 0), 0);
+        updatedStats[key] = baseValue + (classInfo.bonus[key] || 0);
+    }
+
+    const derived = Rpgformula.calculateDerivedStats(updatedStats);
+    const newHp = Math.min(player.hp || derived.maxHP, derived.maxHP);
+    const newMp = Math.min(player.mp || derived.maxMP, derived.maxMP);
+
     await db.query(`
         UPDATE rpg_players SET class = ?, strength = ?, agility = ?, intelligence = ?, dexterity = ?, defense = ?, vitality = ?, wisdom = ?, luck = ?, hp = ?, max_hp = ?, mp = ?, max_mp = ?
         WHERE nomor = ?
     `, [
         className,
-        stats.strength,
-        stats.agility,
-        stats.intelligence,
-        stats.dexterity,
-        stats.defense,
-        stats.vitality,
-        stats.wisdom,
-        stats.luck,
+        updatedStats.strength,
+        updatedStats.agility,
+        updatedStats.intelligence,
+        updatedStats.dexterity,
+        updatedStats.defense,
+        updatedStats.vitality,
+        updatedStats.wisdom,
+        updatedStats.luck,
+        newHp,
         derived.maxHP,
-        derived.maxHP,
-        derived.maxMP,
+        newMp,
         derived.maxMP,
         nomor
     ]);
@@ -378,17 +400,23 @@ module.exports = async (client, message) => {
                         break;
                     }
                     try {
+                        await db.beginTransaction();
                         await setPlayerClass(senderId, className);
-                        // Reset skill slots dan set default 4 skill pertama dari class baru
                         await SkillSlot.clearAllSlots(senderId);
                         const [rows] = await db.query('SELECT level FROM rpg_players WHERE nomor = ?', [senderId]);
                         await SkillSlot.setDefaultSlots(senderId, className, rows[0].level);
+                        await db.commit();
                         await chat.sendMessage(
                             `✅ Class kamu berhasil diubah menjadi *${className}*!\n\n` +
                             `🎮 Skill slot 1-4 sudah di-reset ke default skill class *${className}*.\n` +
                             `Ketik *.myskills* untuk lihat slot aktifmu atau *.skillpool* untuk lihat semua skill yang bisa di-equip.`
                         );
                     } catch (error) {
+                        try {
+                            await db.rollback();
+                        } catch (rollError) {
+                            console.error('Rollback error:', rollError);
+                        }
                         await chat.sendMessage('❌ Terjadi kesalahan saat mengubah class. Coba lagi nanti.');
                         console.error('Change class error:', error);
                     }
