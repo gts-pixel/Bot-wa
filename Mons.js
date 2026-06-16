@@ -38,7 +38,7 @@ const TIER_F_MONSTERS = {
             luk : 16,
         },
         reward: {
-            xp   : 20,
+            xp   : 24,
             gold : { min: 5, max: 12 },
             drops: [
                 { item: 'wolf_pelt',     rate: 0.80 },
@@ -71,7 +71,7 @@ const TIER_F_MONSTERS = {
             luk : 24,
         },
         reward: {
-            xp   : 16,
+            xp   : 19, //done
             gold : { min: 4, max: 9 },
             drops: [
                 { item: 'fox_tail', rate: 0.75 },
@@ -104,7 +104,7 @@ const TIER_F_MONSTERS = {
             luk : 10,
         },
         reward: {
-            xp   : 14,
+            xp   : 17,
             gold : { min: 4, max: 12 },
             drops: [
                 { item: 'silk_thread', rate: 0.85 },
@@ -139,7 +139,7 @@ const TIER_F_MONSTERS = {
             luk : 28,
         },
         reward: {
-            xp   : 18,
+            xp   : 22,
             gold : { min: 6, max: 15 },
             drops: [
                 { item: 'raccoon_mask', rate: 0.50 },
@@ -174,7 +174,7 @@ const TIER_F_MONSTERS = {
             luk : 16,
         },
         reward: {
-            xp   : 15,
+            xp   : 18,
             gold : { min: 2, max: 7 },
             drops: [
                 { item: 'bat_wing',   rate: 0.80 },
@@ -209,7 +209,7 @@ const TIER_F_MONSTERS = {
             luk : 16,
         },
         reward: {
-            xp   : 18,
+            xp   : 22,
             gold : { min: 4, max: 10 },
             drops: [
                 { item: 'spider_silk',  rate: 0.75 },
@@ -245,7 +245,7 @@ const TIER_F_MONSTERS = {
             luk :  8,
         },
         reward: {
-            xp   : 22,
+            xp   : 26,
             gold : { min: 8, max: 18 },
             drops: [
                 { item: 'pebble_core', rate: 0.60 },
@@ -283,7 +283,7 @@ const TIER_F_MONSTERS = {
             luk : 12,
         },
         reward: {
-            xp   : 15,
+            xp   : 18,
             gold : { min: 3, max: 8 },
             drops: [
                 { item: 'ant_mandible', rate: 0.70 },
@@ -318,7 +318,7 @@ const TIER_F_MONSTERS = {
             luk : 12,
         },
         reward: {
-            xp   : 16,
+            xp   : 19,
             gold : { min: 3, max: 8 },
             drops: [
                 { item: 'toad_slime', rate: 0.75 },
@@ -353,7 +353,7 @@ const TIER_F_MONSTERS = {
             luk : 16,
         },
         reward: {
-            xp   : 14,
+            xp   : 17,
             gold : { min: 2, max: 6 },
             drops: [
                 { item: 'proboscis_needle', rate: 0.60 },
@@ -386,7 +386,7 @@ const TIER_F_MONSTERS = {
             luk : 12,
         },
         reward: {
-            xp   : 16,
+            xp   : 19,
             gold : { min: 3, max: 8 },
             drops: [
                 { item: 'rat_fur',     rate: 0.80 },
@@ -419,7 +419,7 @@ const TIER_F_MONSTERS = {
             luk : 10,
         },
         reward: {
-            xp   : 13,
+            xp   : 16,
             gold : { min: 2, max: 5 },
             drops: [
                 { item: 'spore_dust',    rate: 0.85 },
@@ -454,7 +454,7 @@ const TIER_F_MONSTERS = {
             luk : 10,
         },
         reward: {
-            xp   : 22,
+            xp   : 26,
             gold : { min: 6, max: 14 },
             drops: [
                 { item: 'boar_tusk',   rate: 0.60 },
@@ -489,7 +489,7 @@ const TIER_F_MONSTERS = {
             luk : 16,
         },
         reward: {
-            xp   : 16,
+            xp   : 19,
             gold : { min: 3, max: 8 },
             drops: [
                 { item: 'thorn_spike', rate: 0.65 },
@@ -522,7 +522,7 @@ const TIER_F_MONSTERS = {
             luk : 12,
         },
         reward: {
-            xp   : 20,
+            xp   : 24,
             gold : { min: 5, max: 12 },
             drops: [
                 { item: 'bone_fragment', rate: 0.85 },
