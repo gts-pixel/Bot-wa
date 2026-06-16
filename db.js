@@ -11,18 +11,26 @@ const sslOptions = sslEnabled
     : { rejectUnauthorized: false }
   : undefined;
 
-const conn = mysql.createConnection({
+// ── POOL, bukan single connection ──
+// Single connection gampang stuck kalau TiDB idle/auto-pause atau network hiccup.
+// Pool otomatis bikin koneksi baru kalau ada yang mati, jadi query gak nyangkut selamanya.
+const pool = mysql.createPool({
   host: process.env.TIDB_HOST,
   port: process.env.TIDB_PORT,
   user: process.env.TIDB_USER,
   password: process.env.TIDB_PASSWORD,
   database: process.env.TIDB_DATABASE,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  connectTimeout: 10_000,        // 10 detik max buat connect baru
   ...(sslOptions ? { ssl: sslOptions } : {})
 });
 
-const db = conn.promise();
+const db = pool.promise();
 
-conn.connect((err) => {
+// Cek koneksi awal & bikin tabel dasar
+pool.query('SELECT 1', (err) => {
   if (err) {
     console.error('Database connection error:', err);
   } else {
@@ -46,7 +54,7 @@ conn.connect((err) => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `;
 
-    conn.query(createUsersTable, (createErr) => {
+    pool.query(createUsersTable, (createErr) => {
       if (createErr) {
         console.error('Error creating users table:', createErr);
       } else {
@@ -54,7 +62,7 @@ conn.connect((err) => {
       }
     });
 
-    conn.query(createLogTable, (createErr) => {
+    pool.query(createLogTable, (createErr) => {
       if (createErr) {
         console.error('Error creating log_perintah table:', createErr);
       } else {
@@ -64,6 +72,13 @@ conn.connect((err) => {
   }
 });
 
-module.exports = conn;
-module.exports.db = conn.promise();
-module.exports.promise = conn.promise.bind(conn);
+// ── Watchdog ping berkala — jaga pool tetap hidup & cepat ketauan kalau stuck ──
+setInterval(() => {
+  pool.query('SELECT 1', (err) => {
+    if (err) console.warn('⚠️ DB keep-alive gagal:', err.message);
+  });
+}, 60_000);
+
+module.exports = pool;
+module.exports.db = db;
+module.exports.promise = () => db;

@@ -48,6 +48,21 @@ async function startBot() {
         }
     });
 
+    let lastActivity = Date.now();
+
+    sock.ev.on('messages.upsert', () => {
+        lastActivity = Date.now();
+    });
+
+    const watchdog = setInterval(() => {
+        const idleMs = Date.now() - lastActivity;
+        if (idleMs > 5 * 60 * 1000) {
+            console.log('⚠️ Watchdog: koneksi tampak stuck, reconnecting...');
+            clearInterval(watchdog);
+            sock.end(new Error('watchdog_timeout'));
+        }
+    }, 60_000);
+
     // ── QR ──
     sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
         if (qr && NOMOR_WA) {
@@ -60,6 +75,7 @@ async function startBot() {
             }
         }
         if (connection === 'close') {
+            clearInterval(watchdog);
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Koneksi terputus, reconnect:', shouldReconnect);
             if (shouldReconnect) startBot();
@@ -108,10 +124,24 @@ async function startBot() {
             // Bungkus msg agar kompatibel dengan handler lama
             const wrappedMsg = wrapMessage(sock, msg, from, body, isGroup);
 
+            const timeout = (ms) => new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(`timeout_${ms}ms`)), ms)
+            );
+
             if (rpgCommands.includes(command)) {
-                await rpg(sock, wrappedMsg).catch(e => console.error('RPG error:', e));
+                await Promise.race([
+                    rpg(sock, wrappedMsg),
+                    timeout(15_000)
+                ]).catch(e => {
+                    console.error(`[${new Date().toISOString()}] RPG error/timeout .${command}:`, e.message);
+                });
             } else {
-                await msgg(sock, wrappedMsg).catch(e => console.error('MSGG error:', e));
+                await Promise.race([
+                    msgg(sock, wrappedMsg),
+                    timeout(15_000)
+                ]).catch(e => {
+                    console.error(`[${new Date().toISOString()}] MSGG error/timeout .${command}:`, e.message);
+                });
             }
         }
     });
