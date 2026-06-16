@@ -113,7 +113,11 @@ function parseArgs(str) {
  
 async function getItemByKey(itemKey) {
     const [rows] = await db.query(
-        'SELECT i.*, GROUP_CONCAT(e.stat, ":", e.value, ":", e.value_mode SEPARATOR "|") as effects FROM rpg_items i LEFT JOIN rpg_item_effects e ON i.id = e.item_id WHERE i.item_key = ? OR i.name = ? GROUP BY i.id',
+        `SELECT i.*, GROUP_CONCAT(e.stat, ":", e.value, ":", e.value_mode SEPARATOR "|") as effects
+         FROM rpg_items i
+         LEFT JOIN rpg_item_effects e ON i.id = e.item_id
+         WHERE LOWER(i.item_key) = LOWER(?) OR LOWER(i.name) = LOWER(?)
+         GROUP BY i.id`,
         [itemKey, itemKey]
     );
     return rows[0] || null;
@@ -391,7 +395,7 @@ async function handleInventory(chat, senderId) {
         lines.push('');
     }
  
-    lines.push('Gunakan *.equip <item_key>* untuk equip item.');
+    lines.push('Gunakan *.useitem <item_key>* untuk menggunakan item.');
     await chat.sendMessage(lines.join('\n'));
 }
  
@@ -409,16 +413,20 @@ async function handleEquip(chat, senderId, argsStr) {
     const [invRows] = await db.query(
         `SELECT inv.id, inv.quantity, i.* FROM rpg_inventory inv
          JOIN rpg_items i ON inv.item_id = i.id
-         WHERE inv.player_nomor = ? AND i.item_key = ? LIMIT 1`,
-        [senderId, itemKey]
+         WHERE inv.player_nomor = ? AND (LOWER(i.item_key) = LOWER(?) OR LOWER(i.name) = LOWER(?))
+         LIMIT 1`,
+        [senderId, itemKey, itemKey]
     );
     if (!invRows.length) return chat.sendMessage(`❌ Item *${itemKey}* tidak ada di inventory kamu.`);
  
     const inv  = invRows[0];
     const item = inv;
  
-    if (item.type !== 'equipment')
-        return chat.sendMessage(`❌ *${item.name}* bukan equipment dan tidak bisa diequip.`);
+    if (item.type !== 'equipment') {
+        const suggestion = item.type === 'consumable' ? `
+Gunakan *.useitem ${item.item_key}* untuk menggunakan item ini.` : '';
+        return chat.sendMessage(`❌ *${item.name}* bukan equipment dan tidak bisa diequip.${suggestion}`);
+    }
     if (player.level < item.min_level)
         return chat.sendMessage(`❌ Level kamu belum cukup. Min level: ${item.min_level}`);
  
@@ -489,8 +497,9 @@ async function handleUseItem(chat, senderId, argsStr) {
     const [invRows] = await db.query(
         `SELECT inv.id, inv.quantity, i.* FROM rpg_inventory inv
          JOIN rpg_items i ON inv.item_id = i.id
-         WHERE inv.player_nomor = ? AND i.item_key = ? LIMIT 1`,
-        [senderId, itemKey]
+         WHERE inv.player_nomor = ? AND (LOWER(i.item_key) = LOWER(?) OR LOWER(i.name) = LOWER(?))
+         LIMIT 1`,
+        [senderId, itemKey, itemKey]
     );
  
     if (!invRows.length) return chat.sendMessage(`❌ Item *${itemKey}* tidak ada di inventory kamu.`);
