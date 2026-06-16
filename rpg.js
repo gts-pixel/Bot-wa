@@ -820,21 +820,19 @@ module.exports = async (client, message) => {
                 await dbitem.handleCommand(client, message, command, args);
                 break;
             case "shop" : {
-                const arg = (args || '').trim().toLowerCase();
+                const parts = (args || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
                 const validTypes = ['equipment', 'consumable', 'material'];
 
-                let page = 1;
-                let type = null;
-
-                if (validTypes.includes(arg)) {
-                    type = arg;
-                } else if (arg && !isNaN(parseInt(arg))) {
-                    page = parseInt(arg);
+                if (!parts.length) {
+                    await chat.sendMessage(RPGShop.formatShopCategoryPrompt());
+                    break;
                 }
 
-                const out = await RPGShop.formatShopList(page, type);
-                await chat.sendMessage(out);
-                break;
+                const type = parts[0];
+                if (!validTypes.includes(type)) {
+                    await chat.sendMessage(`❌ Kategori *${type}* tidak dikenal.\n\n` + RPGShop.formatShopCategoryPrompt());
+                    break;
+                }    
             }
 
             case "buy" : {

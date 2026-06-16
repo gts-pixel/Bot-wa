@@ -18,28 +18,19 @@ const SHOP_VISIBLE_TYPES = ['consumable', 'equipment', 'material'];
 // ══════════════════════════════════════════
 
 /**
- * Ambil semua item yang dijual di shop (price_buy > 0).
- * Bisa difilter by type/page untuk shop besar.
+ * Ambil item shop untuk 1 kategori spesifik (type wajib diisi).
  */
-async function getShopItems(page = 1, perPage = 8, type = null) {
+async function getShopItems(page = 1, perPage = 8, type) {
     const offset = (page - 1) * perPage;
-    let query = `SELECT * FROM rpg_items WHERE price_buy > 0 AND type IN (?)`;
-    const params = [SHOP_VISIBLE_TYPES];
 
-    if (type) {
-        query += ` AND type = ?`;
-        params.push(type);
-    }
-
-    query += ` ORDER BY type, price_buy ASC LIMIT ? OFFSET ?`;
-    params.push(perPage, offset);
-
-    const [rows] = await db.query(query, params);
+    const [rows] = await db.query(
+        `SELECT * FROM rpg_items WHERE price_buy > 0 AND type = ? ORDER BY price_buy ASC LIMIT ? OFFSET ?`,
+        [type, perPage, offset]
+    );
 
     const [countRows] = await db.query(
-        `SELECT COUNT(*) as total FROM rpg_items WHERE price_buy > 0 AND type IN (?)` +
-        (type ? ` AND type = ?` : ``),
-        type ? [SHOP_VISIBLE_TYPES, type] : [SHOP_VISIBLE_TYPES]
+        `SELECT COUNT(*) as total FROM rpg_items WHERE price_buy > 0 AND type = ?`,
+        [type]
     );
 
     return {
@@ -192,36 +183,45 @@ const TYPE_LABEL = {
 };
 
 /**
- * Format daftar item shop untuk ditampilkan.
+ * Format daftar item shop untuk 1 kategori spesifik.
  */
-async function formatShopList(page = 1, type = null) {
+async function formatShopList(page = 1, type) {
     const { items, totalPages, total } = await getShopItems(page, 8, type);
 
+    const emoji = { equipment: '⚔️', consumable: '🧪', material: '🪨' }[type] || '🏪';
+    const label = TYPE_LABEL[type] || type;
+
     if (!items.length) {
-        return `🏪 *Shop kosong* — belum ada item yang dijual.`;
+        return `${emoji} *Shop ${label}*\n\nBelum ada item di kategori ini.`;
     }
 
-    let out = `🏪 *Welcome to Shop!*\n`;
-    out += type ? `Kategori: ${TYPE_LABEL[type] || type}\n` : '';
+    let out = `${emoji} *Shop — ${label}*\n`;
     out += `Halaman ${page}/${totalPages} (${total} item)\n\n`;
 
-    let lastType = null;
     for (const item of items) {
-        if (item.type !== lastType) {
-            out += `\n${TYPE_LABEL[item.type] || item.type}\n`;
-            lastType = item.type;
-        }
         const lvlTag = item.min_level > 1 ? ` (lv.${item.min_level})` : '';
-        out += `  ${item.emoji || '📦'} *${item.name}*${lvlTag} — 💰${item.price_buy}\n`;
-        if (item.desc) out += `     _${item.desc}_\n`;
+        out += `${item.emoji || '📦'} *${item.name}*${lvlTag} — 💰${item.price_buy}\n`;
+        if (item.desc) out += `   _${item.desc}_\n`;
     }
 
     out += `\n💡 *.buy [nama item] [jumlah]* — beli item\n`;
     out += `💡 *.sell [nama item] [jumlah]* — jual item\n`;
-    if (totalPages > 1) out += `💡 *.shop [halaman]* — lihat halaman lain\n`;
-    out += `💡 *.shop equipment* / *.shop consumable* / *.shop material* — filter kategori`;
+    if (totalPages > 1) out += `💡 *.shop ${type} [halaman]* — lihat halaman lain`;
 
     return out;
+}
+
+/**
+ * Pesan saat .shop dipanggil tanpa kategori — minta pilih dulu.
+ */
+function formatShopCategoryPrompt() {
+    return (
+        `🏪 *Pilih kategori shop:*\n\n` +
+        `⚔️ *.shop equipment* — senjata, armor, dll\n` +
+        `🧪 *.shop consumable* — potion, item pakai\n` +
+        `🪨 *.shop material* — bahan crafting/jual\n\n` +
+        `Contoh: *.shop consumable 2* (halaman 2)`
+    );
 }
 
 module.exports = {
@@ -229,4 +229,5 @@ module.exports = {
     buyItem,
     sellItem,
     formatShopList,
+    formatShopCategoryPrompt,
 };
