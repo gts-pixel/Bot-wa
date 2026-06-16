@@ -1,5 +1,5 @@
 // skills.js
-const Rpgformula = require('./rpgformula');
+const Rpgformula = require('./Rpgformula');
 
 // =====================
 // DEFINISI SKILL PER CLASS

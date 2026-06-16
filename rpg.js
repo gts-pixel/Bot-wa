@@ -1,6 +1,6 @@
 // rpg.js
 const db = require('./db').promise(); // Import koneksi database MySQL promise wrapper
-const Rpgformula = require('./rpgformula'); // Import formula RPG 
+const Rpgformula = require('./Rpgformula'); // Import formula RPG 
 const { formatSkillList, useSkill } = require('./RpgClassSkill');
 const { startHunt, doAttack, doSkill, doFlee } = require('./battle');
 const RpgClassSkill = require('./RpgClassSkill');
