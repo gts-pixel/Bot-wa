@@ -832,7 +832,11 @@ module.exports = async (client, message) => {
                 if (!validTypes.includes(type)) {
                     await chat.sendMessage(`❌ Kategori *${type}* tidak dikenal.\n\n` + RPGShop.formatShopCategoryPrompt());
                     break;
-                }    
+                }
+
+                const page = parts.length > 1 ? Math.max(1, parseInt(parts[1]) || 1) : 1;
+                await chat.sendMessage(await RPGShop.formatShopList(page, type));
+                break;
             }
 
             case "buy" : {
