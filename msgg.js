@@ -117,7 +117,8 @@ module.exports = async (sock, message) => {
                     ' - Penambahan fitur cooldown untuk skill (lihat .skill untuk info cooldown)\n' +
                     ' - Perbaikan bug kecil dan peningkatan performa\n' +
                     ' - Perubahan System Skill'+
-                    ' - Penambahan fitur baru: .kosong (coba sendiri apa fungsinya)'
+                    ' - Penambahan fitur baru: .kosong (coba sendiri apa fungsinya)' +
+                    ' - Peningkatan exp yang didapat dari monster sebesar 20%' 
                 );
                 break;
 

@@ -8,6 +8,7 @@ const dbitem = require('./dbitem');
 const { checkCooldown } = require ('./cd')
 const { redeemCode, createCode } = require("./Redeem");
 const SkillSlot = require('./SkillSlot');
+const RPGShop = require('./RPGShop');
 const OWNER_NUMBERS = (process.env.OWNER_NUMBER || '')
     .split(',')
     .map(n => n.trim().replace(/@.*$/, ''))
@@ -819,7 +820,61 @@ module.exports = async (client, message) => {
                 await dbitem.handleCommand(client, message, command, args);
                 break;
             case "shop" : {
-                
+                const arg = (args || '').trim().toLowerCase();
+                const validTypes = ['equipment', 'consumable', 'material'];
+
+                let page = 1;
+                let type = null;
+
+                if (validTypes.includes(arg)) {
+                    type = arg;
+                } else if (arg && !isNaN(parseInt(arg))) {
+                    page = parseInt(arg);
+                }
+
+                const out = await RPGShop.formatShopList(page, type);
+                await chat.sendMessage(out);
+                break;
+            }
+
+            case "buy" : {
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.buy [nama item] [jumlah]*\nContoh: *.buy HP Potion 3*\nKetik *.shop* untuk lihat daftar item.');
+                    break;
+                }
+                const parts = args.trim().split(/\s+/);
+                const maybeQty = parseInt(parts[parts.length - 1]);
+                let itemName, qty;
+                if (!isNaN(maybeQty) && maybeQty > 0 && parts.length > 1) {
+                    qty = maybeQty;
+                    itemName = parts.slice(0, -1).join(' ');
+                } else {
+                    qty = 1;
+                    itemName = parts.join(' ');
+                }
+                const result = await RPGShop.buyItem(senderId, itemName, qty);
+                await chat.sendMessage(result.message);
+                break;
+            }
+
+            case "sell": {
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.sell [nama item] [jumlah]*\nContoh: *.sell Wolf Pelt 5*');
+                    break;
+                }
+                const parts = args.trim().split(/\s+/);
+                const maybeQty = parseInt(parts[parts.length - 1]);
+                let itemName, qty;
+                if (!isNaN(maybeQty) && maybeQty > 0 && parts.length > 1) {
+                    qty = maybeQty;
+                    itemName = parts.slice(0, -1).join(' ');
+                } else {
+                    qty = 1;
+                    itemName = parts.join(' ');
+                }
+                const result = await RPGShop.sellItem(senderId, itemName, qty);
+                await chat.sendMessage(result.message);
+                break;
             }
 
             case 'redeem': {
