@@ -381,7 +381,8 @@ module.exports = async (client, message) => {
                         await setPlayerClass(senderId, className);
                         // Reset skill slots dan set default 4 skill pertama dari class baru
                         await SkillSlot.clearAllSlots(senderId);
-                        await SkillSlot.setDefaultSlots(senderId, className);
+                        const [rows] = await db.query('SELECT level FROM rpg_players WHERE nomor = ?', [senderId]);
+                        await SkillSlot.setDefaultSlots(senderId, className, rows[0].level);
                         await chat.sendMessage(
                             `✅ Class kamu berhasil diubah menjadi *${className}*!\n\n` +
                             `🎮 Skill slot 1-4 sudah di-reset ke default skill class *${className}*.\n` +

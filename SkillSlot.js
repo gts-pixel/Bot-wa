@@ -206,6 +206,7 @@ async function setDefaultSlots(nomor, className) {
     const pool = getSkillPool(className);
     if (!pool.length) return;
 
+    const unlockedSkills = pool.filter(s => (s.unlockLevel || 1 ) <= playerLevel);
     const defaultSkills = pool.slice(0, MAX_SLOTS);
     for (let i = 0; i < defaultSkills.length; i++) {
         await db.query(
