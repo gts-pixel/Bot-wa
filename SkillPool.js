@@ -222,7 +222,8 @@ const SKILL_POOL = {
             name: 'War Cry',
             emoji: '📯',
             mpCost: 15,
-            cooldownTurns: 18,
+            cooldownTurns: 3,
+            unlockLevel: 17,
             desc: 'Teriakan perang — DMG = STR × 2 + AGI × 3',
             effect: (p) => {
                 const dmg = Math.floor(p.strength * 2 + p.agility * 3);
@@ -248,6 +249,7 @@ const SKILL_POOL = {
             emoji: '💥',
             mpCost: 50,
             cooldownTurns: 44,
+            unlockLevel: 35,
             desc: 'Ultimate smash. DMG = STR × 10. Resiko HP -15%.',
             effect: (p) => {
                 const dmg = Math.floor(p.strength * 10);
