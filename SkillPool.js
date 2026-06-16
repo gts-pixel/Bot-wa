@@ -704,10 +704,10 @@ const SKILL_POOL = {
             mpCost: 20,
             cooldownTurns: 3,
             unlockLevel: 1,
-            desc: 'DMG = LUK × 5 × (1.0–2.0). Acak!',
+            desc: 'DMG = LUK × 3 × (1.0–2.0). Acak!',
             effect: (p) => {
                 const multiplier = 1 + Math.random();
-                const dmg = Math.floor(p.luck * 5 * multiplier);
+                const dmg = Math.floor(p.luck * 3 * multiplier);
                 return { damage: dmg, desc: `🍀 *Lucky Shot!*\nKeberuntungan menentukan segalanya!\nDMG: *${dmg}* (×${multiplier.toFixed(2)})` };
             }
         },
@@ -718,9 +718,9 @@ const SKILL_POOL = {
             mpCost: 45,
             cooldownTurns: 5,
             unlockLevel: 9,
-            desc: 'Selalu crit. DMG = (DEX × 7 + LUK × 3) × 1.5',
+            desc: 'Selalu crit. DMG = (DEX × 6 + LUK × 2.5) × 1.5',
             effect: (p) => {
-                const base = Math.floor(p.dexterity * 7 + p.luck * 3);
+                const base = Math.floor(p.dexterity * 6 + p.luck * 2.5);
                 const dmg = Math.floor(base * 1.5);
                 return { damage: dmg, desc: `🎯 *Snipe!*\nBidikan mematikan — CRITICAL!\nDMG: *${dmg}*` };
             }
