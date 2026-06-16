@@ -118,7 +118,8 @@ module.exports = async (sock, message) => {
                     ' - Perbaikan bug kecil dan peningkatan performa\n' +
                     ' - Perubahan System Skill'+
                     ' - Penambahan fitur baru: .kosong (coba sendiri apa fungsinya)' +
-                    ' - Peningkatan exp yang didapat dari monster sebesar 20%' 
+                    ' - Peningkatan exp yang didapat dari monster sebesar 20%' +
+                    ' - penambahan fitur baru: .shop, .buy, .sell untuk jual beli item di RPGShop'
                 );
                 break;
 
