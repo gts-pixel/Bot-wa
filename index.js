@@ -41,6 +41,7 @@ async function startBot() {
         auth: state,
         logger: pino({ level: 'silent'}),
         printQRInTerminal: false,
+        keepAliveIntervalMs: 15_000,
         shouldIgnoreJid: jid => jid.endsWith('@lid'),
         getMessage: async (key) => {
             return {conversation: ''};
