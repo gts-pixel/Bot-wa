@@ -1,6 +1,7 @@
 // msgg.js — Baileys compatible
 const db = require('./db').promise();
 const { checkCooldown } = require ('./cd')
+const sharp = require('sharp');
 
 module.exports = async (sock, message) => {
     try {
@@ -103,9 +104,18 @@ module.exports = async (sock, message) => {
             case 's':
                 if (message.hasMedia) {
                     const media = await message.downloadMedia();
-                    await sock.sendMessage(sender, {
-                        sticker: Buffer.from(media.data, 'base64'),
-                    });
+                    const buffer = Buffer.from(media.data, 'base64');
+                    try {
+                        const webp = await sharp(buffer)
+                            .resize(512, 512, { fit: 'inside' })
+                            .webp({ quality: 100 })
+                            .toBuffer();
+
+                        await sock.sendMessage(sender, { sticker: webp });
+                    } catch (e) {
+                        console.error('Gagal konversi gambar ke WebP:', e);
+                        await chat.sendMessage('❌ Gagal membuat stiker. Coba kirim gambar yang lain.');
+                    }
                 } else {
                     await chat.sendMessage('❌ Balas gambar dengan caption .sticker untuk membuat stiker.');
                 }
