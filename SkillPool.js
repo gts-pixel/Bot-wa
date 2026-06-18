@@ -125,10 +125,12 @@ const SKILL_POOL = {
             mpCost: 35,
             cooldownTurns: 4,
             unlockLevel: 7,
-            desc: 'Heal HP = DEF × 4 + VIT × 4',
+            desc: 'reduce damage 35% selama 2 turn',
             effect: (p) => {
-                const heal = Math.floor(p.defense * 4 + p.vitality * 4);
-                return { heal, desc: `🛡️ *Sacred Shield!*\nPerisai suci melindungi dan memulihkanmu.\nHP +*${heal}*` };
+                const heal = Math.floor(p.defense * 2 + p.vitality * 1.2);
+                const damageReduction = { persent: 0.35, duration: 2 };
+                return { heal, damageReduction, desc: `🛡️ *Sacred Shield!*\nPerisai suci melindungimu 
+                    \nDamage diterima 35% selama 2 turn dan memulihkanmu.\nHP +*${heal}*` };
             }
         },
         {

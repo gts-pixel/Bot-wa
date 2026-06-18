@@ -133,6 +133,7 @@ async function startHunt(senderId, chat) {
         monsterHp,
         monsterMp,
         turn: 1,
+        damageReduction: null, // untuk efek debuff defense
         dotEffect: null,
         stunned: false,
     };
@@ -328,6 +329,15 @@ async function doSkill(senderId, skillKey, chat) {
         newPlayerHp = Math.min(player.max_hp, newPlayerHp + result.lifesteal);
     }
 
+    // Damage Reduction buff/debuff
+    if (result.damageReduction) {
+        battle.damageReduction = {
+            persent: result.damageReduction.persent,
+            duration: result.damageReduction.duration,
+        };
+        logs.push(`🛡️ Damage Reduction: ${result.damageReduction.persent}% selama ${result.damageReduction.duration} turn.`);
+    }
+
     // Cek monster mati
     if (battle.monsterHp <= 0) {
         await db.query('UPDATE rpg_players SET hp = ?, mp = ? WHERE nomor = ?', [newPlayerHp, newPlayerMp, senderId]);
@@ -340,15 +350,20 @@ async function doSkill(senderId, skillKey, chat) {
     battle.monsterMp = newMonsterMp;
     logs.push(...mLogs);
 
+    const reducePercent2 = battle.damageReduction?.duration > 0 ? battle.damageReduction.persent : 0;
+
     if (dmgToPlayer === -1) {
         logs.push(`💨 Kamu menghindar dari serangan ${monster.emoji}!`);
     } else if (dmgToPlayer < 0) {
-        const actualDmg = Math.abs(dmgToPlayer);
+        let actualDmg = Math.abs(dmgToPlayer);
+        if (reducePercent2 > 0) actualDmg = Math.floor(actualDmg * (1 - reducePercent2));
         newPlayerHp = Math.max(0, newPlayerHp - actualDmg);
         logs.push(`💥 *CRITICAL!* Kamu terkena *${actualDmg}* damage!`);
     } else if (dmgToPlayer > 0) {
-        newPlayerHp = Math.max(0, newPlayerHp - dmgToPlayer);
-        logs.push(`💔 Kamu terkena *${dmgToPlayer}* damage.`);
+        let finalDmg = dmgToPlayer;
+        if (reducePercent2 > 0) finalDmg = Math.floor(finalDmg * (1 - reducePercent2));
+        newPlayerHp = Math.max(0, newPlayerHp - finalDmg);
+        logs.push(`💔 Kamu terkena *${finalDmg}* damage.`);
     }
 
     if (specialEffect?.type === 'stun' && Math.random() < specialEffect.chance) {
@@ -364,6 +379,12 @@ async function doSkill(senderId, skillKey, chat) {
         logs.push(`🩸 *${battle.dotEffect.type}*: -${battle.dotEffect.dmgPerTurn} HP`);
         battle.dotEffect.duration--;
         if (battle.dotEffect.duration <= 0) battle.dotEffect = null;
+    }
+
+    // Decrement damage reduction duration
+    if (battle.damageReduction && battle.damageReduction.duration > 0) {
+        battle.damageReduction.duration--;
+        if (battle.damageReduction.duration <= 0) battle.damageReduction = null;
     }
 
     await db.query('UPDATE rpg_players SET hp = ?, mp = ? WHERE nomor = ?', [newPlayerHp, newPlayerMp, senderId]);
