@@ -411,7 +411,7 @@ async function handleEquip(chat, senderId, argsStr) {
  
     // Cek item di inventory
     const [invRows] = await db.query(
-        `SELECT inv.id, inv.quantity, i.* FROM rpg_inventory inv
+        `SELECT inv.id as inventory_id, inv.quantity, i.* FROM rpg_inventory inv
          JOIN rpg_items i ON inv.item_id = i.id
          WHERE inv.player_nomor = ? AND (LOWER(i.item_key) = LOWER(?) OR LOWER(i.name) = LOWER(?))
          LIMIT 1`,
@@ -448,7 +448,7 @@ Gunakan *.useitem ${item.item_key}* untuk menggunakan item ini.` : '';
         // Equip item baru
         await db.query(
             'INSERT INTO rpg_equipped (player_nomor, inventory_id, slot) VALUES (?, ?, ?)',
-            [senderId, inv.id, slot]
+            [senderId, inv.inventory_id, slot]
         );
  
         const prevMsg = eqRows.length > 0 ? `\n📤 Dilepas: ${eqRows[0].item_name}` : '';
@@ -495,7 +495,7 @@ async function handleUseItem(chat, senderId, argsStr) {
  
     // Cek item di inventory
     const [invRows] = await db.query(
-        `SELECT inv.id, inv.quantity, i.* FROM rpg_inventory inv
+        `SELECT inv.id as inventory_id, inv.quantity, i.* FROM rpg_inventory inv
          JOIN rpg_items i ON inv.item_id = i.id
          WHERE inv.player_nomor = ? AND (LOWER(i.item_key) = LOWER(?) OR LOWER(i.name) = LOWER(?))
          LIMIT 1`,
@@ -560,9 +560,9 @@ async function handleUseItem(chat, senderId, argsStr) {
  
     // Kurangi quantity
     if (inv.quantity > 1) {
-        await db.query('UPDATE rpg_inventory SET quantity = quantity - 1 WHERE id = ?', [inv.id]);
+        await db.query('UPDATE rpg_inventory SET quantity = quantity - 1 WHERE id = ?', [inv.inventory_id]);
     } else {
-        await db.query('DELETE FROM rpg_inventory WHERE id = ?', [inv.id]);
+        await db.query('DELETE FROM rpg_inventory WHERE id = ?', [inv.inventory_id]);
         resultLines.push(`\n🗑️ Item habis dan dihapus dari inventory.`);
     }
  
