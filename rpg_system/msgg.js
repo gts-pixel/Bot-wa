@@ -1,5 +1,5 @@
 // msgg.js — Baileys compatible
-const db = require('./db').promise();
+const db = require('../db').promise();
 const { checkCooldown } = require ('./cd')
 const sharp = require('sharp');
 

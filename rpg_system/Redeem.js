@@ -1,5 +1,5 @@
 // redeem.js
-const db = require('./db').promise();
+const db = require('../db').promise();
 
 // =====================
 // INIT TABEL

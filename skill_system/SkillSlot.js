@@ -2,7 +2,7 @@
 // Sistem slot skill aktif per player — mirip Pokemon (4 slot aktif dari pool lebih banyak)
 // Slot disimpan di tabel `player_skill_slots` di DB
 
-const db = require('./db').promise();
+const db = require('../db').promise();
 const { getSkillPool, findSkillFromPool } = require('./SkillPool');
 
 const MAX_SLOTS = 4;
