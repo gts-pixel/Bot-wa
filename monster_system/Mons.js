@@ -1,5 +1,5 @@
 const rpg = require('../rpg_system/rpg');
-const msgg = require('../rpg_system/msgg');
+const msgg = require('../msgg');
 const dbitem = require('../dbitem');
 
 // ============================================================

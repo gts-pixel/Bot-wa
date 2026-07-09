@@ -1,7 +1,7 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino')
 const qrcode = require('qrcode-terminal');
-const msgg = require('./rpg_system/msgg');
+const msgg = require('./msgg');
 const rpg = require('./rpg_system/rpg');
 require('dotenv').config();
 const readline = require('readline');

@@ -1,6 +1,6 @@
 // msgg.js — Baileys compatible
-const db = require('../db').promise();
-const { checkCooldown } = require ('./cd')
+const db = require('./db').promise();
+const { checkCooldown } = require ('./rpg_system/cd')
 const sharp = require('sharp');
 
 module.exports = async (sock, message) => {
