@@ -3,8 +3,8 @@
 // jual item dari inventory balik jadi gold.
 // Menggunakan tabel rpg_items, rpg_inventory, rpg_players yang sudah ada (lihat dbitem.js).
 
-const db = require('./db').promise();
-const { getItemByKey, addItemToInventory } = require('./dbitem');
+const db = require('../db').promise();
+const { getItemByKey, addItemToInventory } = require('../dbitem');
 
 // ══════════════════════════════════════════
 // KONFIGURASI

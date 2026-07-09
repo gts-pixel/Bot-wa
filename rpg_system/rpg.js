@@ -1,13 +1,13 @@
 // rpg.js
-const db = require('./db').promise(); // Import koneksi database MySQL promise wrapper
+const db = require('../db').promise(); // Import koneksi database MySQL promise wrapper
 const Rpgformula = require('./Rpgformula'); // Import formula RPG 
-const { formatSkillList, useSkill } = require('./RpgClassSkill');
+const { formatSkillList, useSkill } = require('../skill_system/RpgClassSkill');
 const { startHunt, doAttack, doSkill, doFlee } = require('./battle');
-const RpgClassSkill = require('./RpgClassSkill');
-const dbitem = require('./dbitem');
+const RpgClassSkill = require('../skill_system/RpgClassSkill');
+const dbitem = require('../dbitem');
 const { checkCooldown } = require ('./cd')
 const { redeemCode, createCode } = require("./Redeem");
-const SkillSlot = require('./SkillSlot');
+const SkillSlot = require('../skill_system/SkillSlot');
 const RPGShop = require('./RPGShop');
 const OWNER_NUMBERS = (process.env.OWNER_NUMBER || '')
     .split(',')

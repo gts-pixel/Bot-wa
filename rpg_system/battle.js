@@ -1,8 +1,8 @@
-const db = require('./db').promise();
-const { TIER_F_MONSTERS, calcMonsterDerived, rollGold, rollDrops } = require('./Mons');
-const { findSkillBySlot } = require('./SkillSlot');
+const db = require('../db').promise();
+const { TIER_F_MONSTERS, calcMonsterDerived, rollGold, rollDrops } = require('../monster_system/Mons');
+const { findSkillBySlot } = require('../skill_system/SkillSlot');
 const Rpgformula = require('./Rpgformula');
-const { getSkillCooldown, setSkillCooldown, decrementSkillCooldowns, formatSkillCooldowns } = require('./CDSkill');
+const { getSkillCooldown, setSkillCooldown, decrementSkillCooldowns, formatSkillCooldowns } = require('../skill_system/CDSkill');
 const activeBattles = {};
 
 function getRandomMonsterTierF() {
@@ -457,7 +457,7 @@ async function endBattle(senderId, chat, player, result, logs) {
         const expGain = monster.reward.xp;
         const goldGain = rollGold(monster.reward.gold);
         const drops = rollDrops(monster.reward.drops);
-        const { addItemToInventory } = require('./dbitem');
+        const { addItemToInventory } = require('../dbitem');
 
         // Hitung level up
         const newExp = player.exp + expGain;
@@ -473,7 +473,7 @@ async function endBattle(senderId, chat, player, result, logs) {
                 [newLevel, newExp - expNeeded, goldGain, statPointGain, senderId]
             );
 
-            const { getSkillPool } = require('./SkillPool');
+            const { getSkillPool } = require('../skill_system/SkillPool');
             const pool = getSkillPool(player.class);
             const newSkills = pool.filter(s => s.unlockLevel === newLevel);
             const newSkillMsg = newSkills.length

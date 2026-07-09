@@ -1,6 +1,6 @@
-const db = require('./db').promise();
-const rpg = require('./rpg');
-const msgg = require('./msgg');
+const db = require('../db').promise();
+const rpg = require('../rpg_system/rpg');
+const msgg = require('../rpg_system/msgg');
 
 async function monsterRpgTable() {
     const createTableQuery = `

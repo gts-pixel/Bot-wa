@@ -2,7 +2,7 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLat
 const pino = require('pino')
 const qrcode = require('qrcode-terminal');
 const msgg = require('./msgg');
-const rpg = require('./rpg');
+const rpg = require('./rpg_system/rpg');
 require('dotenv').config();
 const readline = require('readline');
 
@@ -21,20 +21,30 @@ const GRUP_IZIN = [
     '120363422619255262@g.us',
 ];
 
+// ✅ BACA NOMOR DARI .env
+const NomorWaBot = process.env.NOMOR_WA_BOT;
+
 async function startBot() {
     const { version } = await fetchLatestBaileysVersion();
     const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
 
     let NOMOR_WA = '';
-        if (!state.creds.registered) {
-            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-            NOMOR_WA = await new Promise(resolve => {
-                rl.question('Masukkan nomor WA bot (contoh: 6281234567890): ', ans => {
-                    rl.close();
-                    resolve(ans.trim());
-                });
-            });
+    
+    // Validasi state.creds
+    if (!state || !state.creds) {
+        throw new Error('❌ Failed to load auth state');
+    }
+
+    if (!state.creds.registered) {
+        // Prioritas: 1) .env, 2) input manual, 3) error
+        if (NomorWaBot) {
+            NOMOR_WA = NomorWaBot;
+            console.log(`✅ Menggunakan nomor dari .env: ${NOMOR_WA}`);
+        } else {
+            // Jika .env tidak ada, minta input
+            NOMOR_WA = await getUserPhoneNumber();
         }
+    }
 
     const sock = makeWASocket({
         version,
@@ -92,7 +102,7 @@ async function startBot() {
         if (type !== 'notify') return;
 
         for (const msg of messages) {
-            if (msg.key.fromMe) continue;
+            if (!msg.key.fromMe) continue;
             if (!msg.message) continue;
 
             const from = msg.key.remoteJid;
@@ -167,6 +177,21 @@ async function startBot() {
         } catch (e) {
             console.error('Welcome error:', e);
         }
+    });
+}
+
+// ── HELPER FUNCTION ──
+async function getUserPhoneNumber() {
+    const rl = readline.createInterface({ 
+        input: process.stdin, 
+        output: process.stdout 
+    });
+    
+    return new Promise(resolve => {
+        rl.question('❌ BOT_PHONE_NUMBER tidak ditemukan di .env!\nMasukkan nomor WA bot (contoh: 6281234567890): ', ans => {
+            rl.close();
+            resolve(ans.trim());
+        });
     });
 }
 
