@@ -1,8 +1,19 @@
+const { GoogleGenAI } = require("@google/genai");
+
 // msgg.js — Baileys compatible
 const db = require('./db').promise();
 const { checkCooldown } = require ('./rpg_system/cd')
 const sharp = require('sharp');
+const ai = new GoogleGenAI({apiKey : process.env.GEMINI_API_KEY,});
 
+async function askGemini(prompt) {
+    const response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-lite',
+        contents: prompt,
+    });
+
+    return response.text;
+}
 module.exports = async (sock, message) => {
     try {
         const body   = message.body || '';
@@ -32,7 +43,20 @@ module.exports = async (sock, message) => {
             case 'halo':
                 await chat.sendMessage('Halo! 👋 Ada yang bisa dibantu?');
                 break;
-
+            case 'ai':
+                const prompt = fullCmd.replace(/^chat\s*/i, '').trim();
+                if (!prompt) {
+                    await chat.sendMessage('Silahkan isi pertanyaan')
+                    break;
+                }
+                try {
+                    const answer = await askGemini(prompt);
+                    await chat.sendMessage(answer);
+                } catch (err) {
+                    console.error(err);
+                    await chat.sendMessage('Ai gagal terhubung')
+                }
+                break
             case 'help':
                 await chat.sendMessage(
                     '╔═══『 📜 Menu Bot 』═══╗\n\n' +
