@@ -51,7 +51,6 @@ module.exports = async (sock, message) => {
                     '╔══『 📜 Menu Downloader 』══╗\n\n' +
                     '✦ .tt        → Download video tiktok\n' +
                     '✦ .ig        → Download video instagram\n' +
-                    '✦ .pin       → Download video pinterest\n' +
                     '✦ .ytmp4     → Download video youtube\n' +
                     '╚══════════════════════╝\n\n' +
 
@@ -226,10 +225,9 @@ module.exports = async (sock, message) => {
                     }
 
                     const video =
-                        data.video?.hd ||
-                        data.video?.nowm ||
-                        data.video?.sd ||
-                        data.video?.wm;
+                        data.video ||
+                        data.video?.[0] ||
+                        data.media?.[0];
 
                     if (!video) {
                         return await chat.sendMessage("❌ URL video tidak ditemukan.");
@@ -259,29 +257,22 @@ module.exports = async (sock, message) => {
                 break;
             }
 
-            case 'pin' : 
-            case 'pinterest' : {
-                const text = fullCmd.slice(command.length).trim();
+            case 'pin':
+            case 'pinterest': {
+                const text = body.slice(body.indexOf(" ") + 1).trim(); // jangan pakai fullCmd
 
-                if (!text) {
-                    return await chat.sendMessage('❌ Gunakan format: .pin [link]');
+                if (!text || text === ".pin" || text === ".pinterest") {
+                    return await chat.sendMessage("❌ Gunakan format: .pin [keyword]");
                 }
-
-                console.log("BODY =", JSON.stringify(body));
-                console.log("TEXT =", JSON.stringify(text));
 
                 const api = `https://storeapi.ubet.my.id/api/pinterest?apikey=ubedpanel&q=${encodeURIComponent(text)}`;
 
-                console.log("API :", api);
+                console.log("BODY :", body);
+                console.log("TEXT :", text);
+                console.log("API  :", api);
 
                 try {
-                    
-
-                    const { data } = await axios.get(api, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0"
-                        }
-                    });
+                    const { data } = await axios.get(api);
 
                     console.log(data);
 
@@ -289,34 +280,25 @@ module.exports = async (sock, message) => {
                         return await chat.sendMessage("❌ Gagal mengambil data Pinterest.");
                     }
 
-                    const video =
-                        data.video?.hd ||
-                        data.video?.nowm ||
-                        data.video?.sd ||
-                        data.video?.wm;
-
-                    if (!video) {
-                        return await chat.sendMessage("❌ URL video tidak ditemukan.");
+                    if (!data.results || data.results.length === 0) {
+                        return await chat.sendMessage("❌ Tidak ada hasil.");
                     }
 
-                    
+                    await chat.sendMessage(
+                        `📌 *Pinterest Search*\n\n` +
+                        `Keyword : ${data.query}\n` +
+                        `Total : ${data.total}`
+                    );
 
-                    // Download video terlebih dahulu
-                    const res = await axios.get(video, {
-                        responseType: "arraybuffer",
-                        headers: {
-                            "User-Agent": "Mozilla/5.0"
-                        }
-                    });
+                    const media = data.results[Math.floor(Math.random() * data.results.length)];
 
                     await sock.sendMessage(sender, {
-                        video: Buffer.from(res.data),
-                        mimetype: "video/mp4",
-                        caption: `*Pinterest Downloader*\n\n${data.title || "-"}`
+                        image: { url: media.image },
+                        caption: media.link
                     });
 
-                } catch (e) {
-                    console.error("Pinterest Error:", e);
+                } catch (err) {
+                    console.error(err);
                     await chat.sendMessage("❌ Terjadi kesalahan.");
                 }
 
@@ -353,10 +335,7 @@ module.exports = async (sock, message) => {
                     }
 
                     const video =
-                        data.video?.hd ||
-                        data.video?.nowm ||
-                        data.video?.sd ||
-                        data.video?.wm;
+                        data.video;
 
                     if (!video) {
                         return await chat.sendMessage("❌ URL video tidak ditemukan.");
