@@ -1,17 +1,10 @@
 const db = require('../db').promise();
-const { TIER_F_MONSTERS, calcMonsterDerived, rollGold, rollDrops } = require('../monster_system/Mons');
+const { getRandomMonsterByRank, calcMonsterDerived, rollGold, rollDrops } = require('../monster_system/Mons');
+const { getRank } = require('./RankSystem');
 const { findSkillBySlot } = require('../skill_system/SkillSlot');
 const Rpgformula = require('./Rpgformula');
 const { getSkillCooldown, setSkillCooldown, decrementSkillCooldowns, formatSkillCooldowns } = require('../skill_system/CDSkill');
 const activeBattles = {};
-
-function getRandomMonsterTierF() {
-    const keys = Object.keys(TIER_F_MONSTERS);
-    if (keys.length === 0) throw new Error('TIER_F_MONSTERS kosong atau tidak terdefinisi');
-    const key = keys[Math.floor(Math.random() * keys.length)];
-    const m = TIER_F_MONSTERS[key];
-    return { id: key, ...m, derived: calcMonsterDerived(m.stats, m.damageType)};
-}
 
 function rollCrit(luck){ 
     const rate = Math.min(luck * 0.8, 60) / 100; // Maks 60% crit rate
@@ -123,7 +116,8 @@ async function startHunt(senderId, chat) {
         return;
     }
 
-    const monster = getRandomMonsterTierF();
+    const playerRank = getRank(player.level);
+    const monster = getRandomMonsterByRank(playerRank);
     const monsterHp = monster.derived.maxHP;
     const monsterMp = monster.derived.maxMP;
 
@@ -139,7 +133,7 @@ async function startHunt(senderId, chat) {
     };
 
     await chat.sendMessage(
-        `⚔️ *BATTLE START!* [Tier F]\n\n` +
+        `⚔️ *BATTLE START!* [Tier ${monster.tier}]\n\n` +
         `${formatMonsterStatus(monster, monsterHp)}\n\n` +
         `${formatMonsterSkill(monster)}` +
         `Kamu bertemu *${monster.name}* ${monster.emoji}!\n` +

@@ -9,6 +9,7 @@ const { checkCooldown } = require ('./cd')
 const { redeemCode, createCode } = require("./Redeem");
 const SkillSlot = require('../skill_system/SkillSlot');
 const RPGShop = require('./RPGShop');
+const { getRannk } = require('./RankSystem');
 const OWNER_NUMBERS = (process.env.OWNER_NUMBER || '')
     .split(',')
     .map(n => n.trim().replace(/@.*$/, ''))
@@ -448,10 +449,12 @@ module.exports = async (client, message) => {
                         await chat.sendMessage("❌ Kamu belum terdaftar. Ketik *.login* untuk mendaftar.");
                     } else {
                         const player = rows[0];
+                        const rank = getRank(player.level);
                         await chat.sendMessage(
                             `╔═══『 ⚔️ RPG PROFILE ⚔️ 』═══╗\n\n` +
                             `Nama: ${player.nama}\n` +
                             `Class: ${player.class || DEFAULT_CLASS}\n` +
+                            `Rank: ${rank}\n` + 
                             `Level: ${player.level}\n` +
                             `EXP: ${player.exp}\n` +
                             `Gold: ${player.gold}\n\n` +

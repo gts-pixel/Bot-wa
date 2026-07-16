@@ -1,6 +1,8 @@
 const rpg = require('../rpg_system/rpg');
 const msgg = require('../msgg');
 const dbitem = require('../dbitem');
+const { TIER_E_MONSTERS } = require('./monsters_tier_e');
+const { TIER_D_MONSTERS } = require('./monsters_tier_d');
 
 // ============================================================
 //  monsters_tier_f.js
@@ -595,6 +597,79 @@ function getRandomMonsterByArea(area) {
     return { ...m, derived: calcMonsterDerived(m.stats, m.damageType) };
 }
 
+// ============================================================
+//  RANK-BASED SPAWN (dipakai buat .hunt)
+// ============================================================
+
+/**
+ * Urutan tier dari terlemah ke terkuat, sinkron sama getRank() di RankSystem.js.
+ * Tambah tier baru di sini kalau nanti bikin monsters_tier_c.js dst.
+ */
+const TIER_ORDER = ['F', 'E', 'D', 'C', 'B', 'A', 'S'];
+
+/**
+ * Pool monster per tier. Tier yang belum ada data-nya (C, B, A, S)
+ * sengaja belum dimasukkan — nanti tinggal require + tambahin di sini.
+ */
+const TIER_POOLS = {
+    F: TIER_F_MONSTERS,
+    E: TIER_E_MONSTERS,
+    D: TIER_D_MONSTERS,
+};
+
+/**
+ * Ambil random monster dari 1 tier spesifik.
+ * @param {string} tier - 'F' | 'E' | 'D' | ...
+ * @returns {Object|null}
+ */
+function getRandomMonsterFromTier(tier) {
+    const pool = TIER_POOLS[tier];
+    if (!pool) return null;
+    const keys = Object.keys(pool);
+    if (!keys.length) return null;
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    const m = pool[key];
+    return { id: key, ...m, derived: calcMonsterDerived(m.stats, m.damageType) };
+}
+
+/**
+ * Ambil random monster berdasarkan rank pemain (F–S).
+ * Mayoritas spawn dari tier sesuai rank sendiri, tapi ada small chance
+ * ketemu tier tetangga — satu tingkat lebih lemah & satu tingkat lebih kuat.
+ * Contoh: rank E → ~80% tier E, ~12% tier F, ~8% tier D.
+ * Tier yang belum ada data-nya otomatis dilewat (bukan error).
+ * @param {string} rank - hasil dari getRank(level) di RankSystem.js
+ * @returns {Object} monster lengkap + derived stats
+ */
+function getRandomMonsterByRank(rank) {
+    const idx = TIER_ORDER.indexOf(rank);
+    const safeIdx = idx === -1 ? 0 : idx; // rank gak dikenal → fallback tier F
+
+    const candidates = [{ tier: TIER_ORDER[safeIdx], weight: 80 }];
+
+    const lowerTier = TIER_ORDER[safeIdx - 1];
+    if (lowerTier && TIER_POOLS[lowerTier] && Object.keys(TIER_POOLS[lowerTier]).length) {
+        candidates.push({ tier: lowerTier, weight: 12 });
+    }
+
+    const upperTier = TIER_ORDER[safeIdx + 1];
+    if (upperTier && TIER_POOLS[upperTier] && Object.keys(TIER_POOLS[upperTier]).length) {
+        candidates.push({ tier: upperTier, weight: 8 });
+    }
+
+    const valid = candidates.filter(c => TIER_POOLS[c.tier] && Object.keys(TIER_POOLS[c.tier]).length);
+    const pool = valid.length ? valid : [{ tier: 'F', weight: 1 }];
+
+    const totalWeight = pool.reduce((sum, c) => sum + c.weight, 0);
+    let roll = Math.random() * totalWeight;
+
+    for (const c of pool) {
+        if (roll < c.weight) return getRandomMonsterFromTier(c.tier);
+        roll -= c.weight;
+    }
+    return getRandomMonsterFromTier(pool[0].tier); // safety net
+}
+
 /**
  * Roll gold reward dari range
  * @param {{ min: number, max: number }} goldRange
@@ -617,6 +692,10 @@ function rollDrops(drops) {
 
 module.exports = {
     TIER_F_MONSTERS,
+    TIER_E_MONSTERS,
+    TIER_D_MONSTERS,
+    getRandomMonsterByRank,
+    getRandomMonsterFromTier,
     calcMonsterDerived,
     getMonster,
     getRandomMonsterByArea,
