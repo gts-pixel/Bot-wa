@@ -2,6 +2,7 @@
 const db = require('./db').promise();
 const { checkCooldown } = require ('./rpg_system/cd')
 const sharp = require('sharp');
+const axios = require('axios');
 
 module.exports = async (sock, message) => {
     try {
@@ -14,8 +15,8 @@ module.exports = async (sock, message) => {
         if (!body.startsWith('.')) return;
 
         // Ambil command (full, tanpa split — biar ping dll bisa pakai const)
-        const fullCmd = body.slice(1).trim().toLowerCase();
-        const command = fullCmd.split(/\s+/)[0];
+        const fullCmd = body.slice(1).trim();
+        const command = fullCmd.split(/\s+/)[0].toLowerCase();
 
         await db.query('INSERT IGNORE INTO users (nomor, nama) VALUES (?, ?)', [sender, nama]);
         await db.query('INSERT INTO log_perintah (nomor, perintah) VALUES (?, ?)', [sender, command]);
@@ -44,7 +45,16 @@ module.exports = async (sock, message) => {
                     '✦ .owner     → Info pembuat bot\n' +
                     '✦ .sticker   → Ubah gambar jadi stiker\n' +
                     '✦ .update    → Lihat update terbaru\n' +
+                    '✦ .play      → Memutar lagu\n' +
                     '╚══════════════════════╝\n\n' +
+
+                    '╔══『 📜 Menu Downloader 』══╗\n\n' +
+                    '✦ .tt        → Download video tiktok\n' +
+                    '✦ .ig        → Download video instagram\n' +
+                    '✦ .pin       → Download video pinterest\n' +
+                    '✦ .ytmp4     → Download video youtube\n' +
+                    '╚══════════════════════╝\n\n' +
+
                     '╔═══『 ⚔️ RPG Menu 』═══╗\n\n' +
                     '✦ .login     → Login RPG\n' +
                     '✦ .change    → Ubah nama\n' +
@@ -121,15 +131,326 @@ module.exports = async (sock, message) => {
                 }
                 break;
 
+            case 'tt':
+            case 'tiktok': {
+                const text = fullCmd.slice(command.length).trim();
+
+                if (!text) {
+                    return await chat.sendMessage('❌ Gunakan format: .tt [link]');
+                }
+
+                console.log("BODY =", JSON.stringify(body));
+                console.log("TEXT =", JSON.stringify(text));
+
+                const api = `https://storeapi.ubet.my.id/api/tiktok?apikey=ubedpanel&url=${encodeURIComponent(text)}`;
+
+                console.log("API :", api);
+
+                try {
+                    
+
+                    const { data } = await axios.get(api, {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    console.log(data);
+
+                    if (!data.success) {
+                        return await chat.sendMessage("❌ Gagal mengambil data TikTok.");
+                    }
+
+                    const video =
+                        data.video?.hd ||
+                        data.video?.nowm ||
+                        data.video?.sd ||
+                        data.video?.wm;
+
+                    if (!video) {
+                        return await chat.sendMessage("❌ URL video tidak ditemukan.");
+                    }
+
+                    
+
+                    // Download video terlebih dahulu
+                    const res = await axios.get(video, {
+                        responseType: "arraybuffer",
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    await sock.sendMessage(sender, {
+                        video: Buffer.from(res.data),
+                        mimetype: "video/mp4",
+                        caption: `*TikTok Downloader*\n\n${data.title || "-"}`
+                    });
+
+                } catch (e) {
+                    console.error("TikTok Error:", e);
+                    await chat.sendMessage("❌ Terjadi kesalahan.");
+                }
+
+                break;
+            }
+
+            case 'ig' : 
+            case 'instagram' : {
+                const text = fullCmd.slice(command.length).trim();
+
+                if (!text) {
+                    return await chat.sendMessage('❌ Gunakan format: .ig [link]');
+                }
+
+                console.log("BODY =", JSON.stringify(body));
+                console.log("TEXT =", JSON.stringify(text));
+
+                const api = `https://storeapi.ubet.my.id/api/instagram?apikey=ubedpanel&url=${encodeURIComponent(text)}`;
+
+                console.log("API :", api);
+
+                try {
+                    
+
+                    const { data } = await axios.get(api, {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    console.log(data);
+
+                    if (!data.success) {
+                        return await chat.sendMessage("❌ Gagal mengambil data Instagram.");
+                    }
+
+                    const video =
+                        data.video?.hd ||
+                        data.video?.nowm ||
+                        data.video?.sd ||
+                        data.video?.wm;
+
+                    if (!video) {
+                        return await chat.sendMessage("❌ URL video tidak ditemukan.");
+                    }
+
+                    
+
+                    // Download video terlebih dahulu
+                    const res = await axios.get(video, {
+                        responseType: "arraybuffer",
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    await sock.sendMessage(sender, {
+                        video: Buffer.from(res.data),
+                        mimetype: "video/mp4",
+                        caption: `*Instagram Downloader*\n\n${data.title || "-"}`
+                    });
+
+                } catch (e) {
+                    console.error("Instagram Error:", e);
+                    await chat.sendMessage("❌ Terjadi kesalahan.");
+                }
+
+                break;
+            }
+
+            case 'pin' : 
+            case 'pinterest' : {
+                const text = fullCmd.slice(command.length).trim();
+
+                if (!text) {
+                    return await chat.sendMessage('❌ Gunakan format: .pin [link]');
+                }
+
+                console.log("BODY =", JSON.stringify(body));
+                console.log("TEXT =", JSON.stringify(text));
+
+                const api = `https://storeapi.ubet.my.id/api/pinterest?apikey=ubedpanel&q=${encodeURIComponent(text)}`;
+
+                console.log("API :", api);
+
+                try {
+                    
+
+                    const { data } = await axios.get(api, {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    console.log(data);
+
+                    if (!data.success) {
+                        return await chat.sendMessage("❌ Gagal mengambil data Pinterest.");
+                    }
+
+                    const video =
+                        data.video?.hd ||
+                        data.video?.nowm ||
+                        data.video?.sd ||
+                        data.video?.wm;
+
+                    if (!video) {
+                        return await chat.sendMessage("❌ URL video tidak ditemukan.");
+                    }
+
+                    
+
+                    // Download video terlebih dahulu
+                    const res = await axios.get(video, {
+                        responseType: "arraybuffer",
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    await sock.sendMessage(sender, {
+                        video: Buffer.from(res.data),
+                        mimetype: "video/mp4",
+                        caption: `*Pinterest Downloader*\n\n${data.title || "-"}`
+                    });
+
+                } catch (e) {
+                    console.error("Pinterest Error:", e);
+                    await chat.sendMessage("❌ Terjadi kesalahan.");
+                }
+
+                break;
+            }
+
+            case 'ytmp4' : {
+                const text = fullCmd.slice(command.length).trim();
+
+                if (!text) {
+                    return await chat.sendMessage('❌ Gunakan format: .ytmp4 [link]');
+                }
+
+                console.log("BODY =", JSON.stringify(body));
+                console.log("TEXT =", JSON.stringify(text));
+
+                const api = `https://storeapi.ubet.my.id/api/ytmp4?apikey=ubedpanel&url=${encodeURIComponent(text)}`;
+
+                console.log("API :", api);
+
+                try {
+                    
+
+                    const { data } = await axios.get(api, {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    console.log(data);
+
+                    if (!data.success) {
+                        return await chat.sendMessage("❌ Gagal mengambil data YouTube.");
+                    }
+
+                    const video =
+                        data.video?.hd ||
+                        data.video?.nowm ||
+                        data.video?.sd ||
+                        data.video?.wm;
+
+                    if (!video) {
+                        return await chat.sendMessage("❌ URL video tidak ditemukan.");
+                    }
+
+                    
+
+                    // Download video terlebih dahulu
+                    const res = await axios.get(video, {
+                        responseType: "arraybuffer",
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    await sock.sendMessage(sender, {
+                        video: Buffer.from(res.data),
+                        mimetype: "video/mp4",
+                        caption: `*YouTube Downloader*\n\n${data.title || "-"}`
+                    });
+
+                } catch (e) {
+                    console.error("YouTube Error:", e);
+                    await chat.sendMessage("❌ Terjadi kesalahan.");
+                }
+
+                break;
+            }
+ 
+            case 'play' : {
+                const text = fullCmd.slice(command.length).trim();
+
+                if (!text) {
+                    return await chat.sendMessage('❌ Gunakan format: .play [link]');
+                }
+
+                console.log("BODY =", JSON.stringify(body));
+                console.log("TEXT =", JSON.stringify(text));
+
+                const api = `https://storeapi.ubet.my.id/api/play?apikey=ubedpanel&q=${encodeURIComponent(text)}`;
+
+                console.log("API :", api);
+
+                try {
+                    
+
+                    const { data } = await axios.get(api, {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    console.log(data);
+
+                    if (!data.success) {
+                        return await chat.sendMessage("❌ Gagal mengambil data Play.");
+                    }
+
+                    const video =
+                        data.video?.hd ||
+                        data.video?.nowm ||
+                        data.video?.sd ||
+                        data.video?.wm;
+
+                    if (!video) {
+                        return await chat.sendMessage("❌ URL video tidak ditemukan.");
+                    }
+
+                    
+
+                    // Download video terlebih dahulu
+                    const res = await axios.get(video, {
+                        responseType: "arraybuffer",
+                        headers: {
+                            "User-Agent": "Mozilla/5.0"
+                        }
+                    });
+
+                    await sock.sendMessage(sender, {
+                        video: Buffer.from(res.data),
+                        mimetype: "video/mp4",
+                        caption: `*Play Music Downloader*\n\n${data.title || "-"}`
+                    });
+
+                } catch (e) {
+                    console.error("Play Music Error:", e);
+                    await chat.sendMessage("❌ Terjadi kesalahan.");
+                }
+                break;
+            }
+
             case 'update':
                 await chat.sendMessage(
-                    ' - Peningkatan Stat monster sebesar 100% dan peningkatan sedikit pendapatan exp dari monster yang dikalahkan\n' +
-                    ' - Penambahan fitur cooldown untuk skill (lihat .skill untuk info cooldown)\n' +
-                    ' - Perbaikan bug kecil dan peningkatan performa\n' +
-                    ' - Perubahan System Skill'+
-                    ' - Penambahan fitur baru: .kosong (coba sendiri apa fungsinya)' +
-                    ' - Peningkatan exp yang didapat dari monster sebesar 20%' +
-                    ' - penambahan fitur baru: .shop, .buy, .sell untuk jual beli item di RPGShop'
+                    'Penambahan fitur Menu Downloader dan Play Music\n'
                 );
                 break;
 
