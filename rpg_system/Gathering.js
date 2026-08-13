@@ -6,7 +6,7 @@ const db = require('../db').promise();
 const { addItemToInventory, dbReady } = require('../dbitem');
 const QuestSystem = require('./QuestSystem');
 
-const COOLDOWN_MS = 45 * 1000;
+const COOLDOWN_MS = 30 * 1000;
 const cooldowns = {
     fish: new Map(),
     mine: new Map(),
