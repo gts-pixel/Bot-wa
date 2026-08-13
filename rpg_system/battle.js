@@ -4,6 +4,7 @@ const { getRank } = require('./RankSystem');
 const { findSkillBySlot } = require('../skill_system/SkillSlot');
 const Rpgformula = require('./Rpgformula');
 const { getSkillCooldown, setSkillCooldown, decrementSkillCooldowns, formatSkillCooldowns } = require('../skill_system/CDSkill');
+const { getEquippedStatBonus } = require('../dbitem');
 const activeBattles = {};
 
 function rollCrit(luck){ 
@@ -34,6 +35,56 @@ function formatMonsterStatus(monster, monsterHp) {
     return `${monster.emoji} *${monster.name}* ${monster.tier}\nHP: ${monsterHp}/${monster.derived.maxHP} [${bar}] ${pct}%`;
 }
 
+function applyEquippedBonus(player, bonus = {}) {
+    const effective = { ...player };
+    Object.entries(bonus).forEach(([stat, value]) => {
+        effective[stat] = (Number(effective[stat]) || 0) + Number(value || 0);
+    });
+    return effective;
+}
+
+function applyDebuffs(player, battle = {}) {
+    const effective = { ...player };
+    const debuffs = battle.debuffs || [];
+
+    debuffs.forEach(debuff => {
+        const statKey = debuff.stat === 'str' ? 'strength'
+            : debuff.stat === 'agi' ? 'agility'
+            : debuff.stat === 'int' ? 'intelligence'
+            : debuff.stat === 'dex' ? 'dexterity'
+            : debuff.stat === 'def' ? 'defense'
+            : debuff.stat === 'vit' ? 'vitality'
+            : debuff.stat === 'wis' ? 'wisdom'
+            : debuff.stat === 'luk' ? 'luck'
+            : debuff.stat;
+
+        if (statKey && effective[statKey] !== undefined) {
+            effective[statKey] = Math.max(1, Number(effective[statKey] || 0) + Number(debuff.amount || 0));
+        }
+    });
+
+    return effective;
+}
+
+// =====================
+// CC SYSTEM (stun / freeze)
+// =====================
+function applyCC(current, type, turns) {
+    // gak downgrade CC yang lagi jalan lebih lama
+    if (current && current.turns >= turns) return current;
+    return { type, turns };
+}
+
+function tickCC(cc) {
+    if (!cc) return null;
+    const turns = cc.turns - 1;
+    return turns > 0 ? { type: cc.type, turns } : null;
+}
+
+function ccLabel(type) {
+    return type === 'freeze' ? '🥶 *Freeze*' : '😵 *Stun*';
+}
+
 function formatPlayerStatus(player) {
     const maxHp = player.max_hp ?? player.maxHP ?? 0;
     const maxMp = player.max_mp ?? player.maxMP ?? 0;
@@ -48,8 +99,16 @@ function formatMonsterSkill(monster) {
 }
 
 // monster ai
-function monsterTurn(player, monster, monsterMp) {
+function monsterTurn(player, monster, monsterMp, battle) {
     const logs = [];
+
+    // Kalau monster kena stun/freeze dari skill player, skip aksinya
+    if (battle.monsterCC && battle.monsterCC.turns > 0) {
+        logs.push(`${ccLabel(battle.monsterCC.type)}! *${monster.name}* tidak bisa bergerak.`);
+        battle.monsterCC = tickCC(battle.monsterCC);
+        return { dmgToPlayer: 0, logs, newMonsterMp: monsterMp, specialEffect: null };
+    }
+
     const skill = monster.skill;
     let newMonsterMp = monsterMp;
     let dmgToPlayer = 0;
@@ -62,17 +121,17 @@ function monsterTurn(player, monster, monsterMp) {
         const eff = skill.effect;
 
         if (eff.debuff) {
-            specialEffect = {type: 'debuff', ...eff};
+            specialEffect = { type: 'debuff', chance: eff.chance ?? 1, ...eff };
             logs.push(`⚠️ *${monster.name}* menggunakan skill *${skill.name}* \n*${eff.debuff}* selama ${eff.duration} turn!`);
-            dmgToPlayer = 0;
+        } else if (eff.freeze) {
+            specialEffect = { type: 'freeze', chance: eff.chance ?? 1, duration: eff.duration ?? 2 };
+            logs.push(`⚠️ *${monster.name}* menggunakan *${skill.name}*!\n   ${skill.desc}`);
         } else if (eff.stun) {
-            specialEffect = {type: 'stun', chance: eff.chance};
+            specialEffect = { type: 'stun', chance: eff.chance ?? 1, duration: eff.duration ?? 1 };
             logs.push(`⚠️ *${monster.name}* menggunakan *${skill.name}*!\n   ${skill.desc}`);
-            dmgToPlayer = 0;
         } else if (eff.dot) {
-            specialEffect = {type: 'dot', ...eff.dot, chance: eff.chance};
+            specialEffect = { type: 'dot', ...eff.dot, chance: eff.chance ?? 1 };
             logs.push(`⚠️ *${monster.name}* menggunakan *${skill.name}*!\n   ${skill.desc}`);
-            dmgToPlayer = 0;
         } else {
             dmgToPlayer = calcMonsterAttack(monster, player);
             logs.push(`${monster.emoji} *${monster.name}* menyerang!`);
@@ -81,7 +140,7 @@ function monsterTurn(player, monster, monsterMp) {
         dmgToPlayer = calcMonsterAttack(monster, player);
         logs.push(`${monster.emoji} *${monster.name}* menyerang!`);
     }
-    return {dmgToPlayer, logs, newMonsterMp, specialEffect};
+    return { dmgToPlayer, logs, newMonsterMp, specialEffect };
 }
 
 function calcMonsterAttack(monster, player) {
@@ -129,7 +188,10 @@ async function startHunt(senderId, chat) {
         turn: 1,
         damageReduction: null, // untuk efek debuff defense
         dotEffect: null,
-        stunned: false,
+        stunned: false, // legacy, biarin aja biar gak break kode lain yang mungkin masih baca ini
+        debuffs: [],
+        playerCC: null,   // { type: 'stun' | 'freeze', turns: N }
+        monsterCC: null,  // { type: 'stun' | 'freeze', turns: N }
     };
 
     await chat.sendMessage(
@@ -157,21 +219,29 @@ async function doAttack(senderId, chat) {
     const [rows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ?', [senderId]);
     const player = rows[0];
     const {monster} = battle;
+    const bonus = await getEquippedStatBonus(senderId, player);
+    const effectivePlayer = applyEquippedBonus(applyDebuffs(player, battle), bonus);
     let logs = [];
 
     //Player turn
-    const isCrit = rollCrit(player.luck);
-    const monsterDodge = rollDodge(monster.stats.agility);
-    
     let playerDmg = 0;
-    if (monsterDodge) {
-        logs.push(`💨 *${monster.name}* menghindar! Seranganmu meleset.`)
+    if (battle.playerCC && battle.playerCC.turns > 0) {
+        // ★ Player kena stun/freeze, gak bisa nyerang turn ini
+        logs.push(`${ccLabel(battle.playerCC.type)}! Kamu tidak bisa bergerak turn ini.`);
+        battle.playerCC = tickCC(battle.playerCC);
     } else {
-        const rawDmg = calcPlayerPhysDamage(player);
-        const dmgAfterDef = applyDef(rawDmg, monster.stats.def);
-        playerDmg = isCrit ? Math.floor(dmgAfterDef * 1.5) : dmgAfterDef;
-        battle.monsterHp = Math.max(0, battle.monsterHp - playerDmg);
-        logs.push(`⚔️ Kamu menyerang${isCrit ? ' — *CRITICAL!*' : ''}!\nDMG: *${playerDmg}* ke ${monster.emoji} ${monster.name}`);
+        const isCrit = rollCrit(effectivePlayer.luck);
+        const monsterDodge = rollDodge(monster.stats.agility);
+
+        if (monsterDodge) {
+            logs.push(`💨 *${monster.name}* menghindar! Seranganmu meleset.`)
+        } else {
+            const rawDmg = calcPlayerPhysDamage(effectivePlayer);
+            const dmgAfterDef = applyDef(rawDmg, monster.stats.def);
+            playerDmg = isCrit ? Math.floor(dmgAfterDef * 1.5) : dmgAfterDef;
+            battle.monsterHp = Math.max(0, battle.monsterHp - playerDmg);
+            logs.push(`⚔️ Kamu menyerang${isCrit ? ' — *CRITICAL!*' : ''}!\nDMG: *${playerDmg}* ke ${monster.emoji} ${monster.name}`);
+        }
     }
 
     if (battle.monsterHp <= 0) {
@@ -180,7 +250,7 @@ async function doAttack(senderId, chat) {
 
     // Monster Turn
     logs.push('');
-    const { dmgToPlayer, logs: mLogs, newMonsterMp, specialEffect } = monsterTurn(player, monster, battle.monsterMp);
+    const { dmgToPlayer, logs: mLogs, newMonsterMp, specialEffect } = monsterTurn(effectivePlayer, monster, battle.monsterMp, battle);
     battle.monsterMp = newMonsterMp;
     logs.push(...mLogs);
 
@@ -200,12 +270,19 @@ async function doAttack(senderId, chat) {
 
     // handle spesial effect
     if (specialEffect) {
-        if (specialEffect.type === 'stun' && Math.random() < specialEffect.chance) {
+        if (specialEffect.type === 'stun' && Math.random() < (specialEffect.chance ?? 1)) {
+            battle.playerCC = applyCC(battle.playerCC, 'stun', specialEffect.duration ?? 1);
             logs.push(`😵 Kamu terkena *stun*! Giliran berikutnya dilewati.`)
-            battle.stunned = true;
-        } else if (specialEffect.type === 'dot' && Math.random() < specialEffect.chance) {
+        } else if (specialEffect.type === 'freeze' && Math.random() < (specialEffect.chance ?? 1)) {
+            battle.playerCC = applyCC(battle.playerCC, 'freeze', specialEffect.duration ?? 2);
+            logs.push(`🥶 Kamu terkena *freeze*! ${specialEffect.duration ?? 2} giliran dilewati.`)
+        } else if (specialEffect.type === 'dot' && Math.random() < (specialEffect.chance ?? 1)) {
             battle.dotEffect = { dmgPerTurn: specialEffect.dmgPerTurn, duration: specialEffect.duration, type: specialEffect.type };
             logs.push(`☠️ Kamu terkena *${specialEffect.type}*! -${specialEffect.dmgPerTurn} HP per turn selama ${specialEffect.duration} turn.`);
+        } else if (specialEffect.type === 'debuff' && Math.random() < (specialEffect.chance ?? 1)) {
+            const duration = Number.isFinite(Number(specialEffect.duration)) ? Number(specialEffect.duration) : 1;
+            battle.debuffs.push({ stat: specialEffect.stat, amount: specialEffect.amount, duration });
+            logs.push(`⚠️ Kamu terkena debuff *${specialEffect.stat.toUpperCase()}* ${specialEffect.amount > 0 ? '+' : ''}${specialEffect.amount} selama ${duration} turn.`);
         }
     }
     
@@ -223,6 +300,14 @@ async function doAttack(senderId, chat) {
     // Cek player mati
     if (newPlayerHp <= 0) {
         return await endBattle(senderId, chat, { ...player, hp: 0 }, 'lose', logs);
+    }
+
+    if (battle.debuffs.length > 0) {
+        battle.debuffs = battle.debuffs.filter(d => {
+            if (d.duration === 'battle') return true;
+            d.duration -= 1;
+            return d.duration > 0;
+        });
     }
 
     battle.turn++;
@@ -250,9 +335,18 @@ async function doSkill(senderId, skillKey, chat) {
         return;
     }
 
+    // ★ Kalau player kena stun/freeze, gak bisa pakai skill — suruh .attack aja
+    // buat lewatin giliran (biar CD skill & MP gak kebuang percuma)
+    if (battle.playerCC && battle.playerCC.turns > 0) {
+        await chat.sendMessage(`${ccLabel(battle.playerCC.type)}! Kamu tidak bisa pakai skill sekarang.\nKetik *.attack* untuk lewati giliran.`);
+        return;
+    }
+
     const [rows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ?', [senderId]);
     const player = rows[0];
     const { monster } = battle;
+    const bonus = await getEquippedStatBonus(senderId, player);
+    const effectivePlayer = applyEquippedBonus(applyDebuffs(player, battle), bonus);
     let logs = [];
 
     // ★ Skill slot system — .use 1/2/3/4 sesuai slot aktif player
@@ -285,7 +379,7 @@ async function doSkill(senderId, skillKey, chat) {
     setSkillCooldown(battle, skill, cdKey);
 
     // ── PLAYER SKILL TURN ──
-    const result = skill.effect(player);
+    const result = skill.effect(effectivePlayer);
     let newPlayerHp = player.hp;
     let newPlayerMp = player.mp - skill.mpCost;
 
@@ -301,6 +395,14 @@ async function doSkill(senderId, skillKey, chat) {
             battle.monsterHp = Math.max(0, battle.monsterHp - dmgAfterDef);
             logs.push(`💥 DMG ke monster: *${dmgAfterDef}*`);
         }
+    }
+
+    // ★ Terapkan CC (stun/freeze) ke monster kalau skill punya field `cc`
+    // format skill: cc: { type: 'stun' | 'freeze', duration: N, chance: 0-1 }
+    if (result.cc && Math.random() < (result.cc.chance ?? 1)) {
+        const defaultTurns = result.cc.type === 'freeze' ? 2 : 1;
+        battle.monsterCC = applyCC(battle.monsterCC, result.cc.type, result.cc.duration ?? defaultTurns);
+        logs.push(`${ccLabel(result.cc.type)} berhasil dipasang ke *${monster.name}*!`);
     }
 
     // Terapkan heal
@@ -340,7 +442,7 @@ async function doSkill(senderId, skillKey, chat) {
 
     // ── MONSTER TURN ──
     logs.push('');
-    const { dmgToPlayer, logs: mLogs, newMonsterMp, specialEffect } = monsterTurn(player, monster, battle.monsterMp);
+    const { dmgToPlayer, logs: mLogs, newMonsterMp, specialEffect } = monsterTurn(effectivePlayer, monster, battle.monsterMp, battle);
     battle.monsterMp = newMonsterMp;
     logs.push(...mLogs);
 
@@ -360,12 +462,19 @@ async function doSkill(senderId, skillKey, chat) {
         logs.push(`💔 Kamu terkena *${finalDmg}* damage.`);
     }
 
-    if (specialEffect?.type === 'stun' && Math.random() < specialEffect.chance) {
+    if (specialEffect?.type === 'stun' && Math.random() < (specialEffect.chance ?? 1)) {
+        battle.playerCC = applyCC(battle.playerCC, 'stun', specialEffect.duration ?? 1);
         logs.push(`😵 Kamu terkena *stun*!`);
-        battle.stunned = true;
-    } else if (specialEffect?.type === 'dot' && Math.random() < specialEffect.chance) {
+    } else if (specialEffect?.type === 'freeze' && Math.random() < (specialEffect.chance ?? 1)) {
+        battle.playerCC = applyCC(battle.playerCC, 'freeze', specialEffect.duration ?? 2);
+        logs.push(`🥶 Kamu terkena *freeze*! ${specialEffect.duration ?? 2} giliran dilewati.`);
+    } else if (specialEffect?.type === 'dot' && Math.random() < (specialEffect.chance ?? 1)) {
         battle.dotEffect = { dmgPerTurn: specialEffect.dmgPerTurn, duration: specialEffect.duration, type: specialEffect.type };
         logs.push(`☠️ Kamu terkena *${specialEffect.type}*! -${specialEffect.dmgPerTurn} HP/turn`);
+    } else if (specialEffect?.type === 'debuff' && Math.random() < (specialEffect.chance ?? 1)) {
+        const duration = Number.isFinite(Number(specialEffect.duration)) ? Number(specialEffect.duration) : 1;
+        battle.debuffs.push({ stat: specialEffect.stat, amount: specialEffect.amount, duration });
+        logs.push(`⚠️ Kamu terkena debuff *${specialEffect.stat.toUpperCase()}* ${specialEffect.amount > 0 ? '+' : ''}${specialEffect.amount} selama ${duration} turn.`);
     }
 
     if (battle.dotEffect?.duration > 0) {
@@ -385,6 +494,14 @@ async function doSkill(senderId, skillKey, chat) {
 
     if (newPlayerHp <= 0) {
         return await endBattle(senderId, chat, { ...player, hp: 0, mp: newPlayerMp }, 'lose', logs);
+    }
+
+    if (battle.debuffs.length > 0) {
+        battle.debuffs = battle.debuffs.filter(d => {
+            if (d.duration === 'battle') return true;
+            d.duration -= 1;
+            return d.duration > 0;
+        });
     }
 
     battle.turn++;
@@ -452,6 +569,7 @@ async function endBattle(senderId, chat, player, result, logs) {
         const goldGain = rollGold(monster.reward.gold);
         const drops = rollDrops(monster.reward.drops);
         const { addItemToInventory } = require('../dbitem');
+        require('./QuestSystem').trackProgress(senderId, 'hunt', 1).catch(() => {}); // ★ hook quest, non-blocking
 
         // Hitung level up
         const newExp = player.exp + expGain;
@@ -511,4 +629,10 @@ async function endBattle(senderId, chat, player, result, logs) {
     }
 }
 
-module.exports = { startHunt, doAttack, doSkill, doFlee, activeBattles };
+module.exports = {
+    startHunt, doAttack, doSkill, doFlee, activeBattles,
+    // ★ di-export biar bisa dipakai ulang sama partyBattle.js
+    rollCrit, rollDodge, calcPlayerPhysDamage, applyDef,
+    applyEquippedBonus, applyDebuffs, applyCC, tickCC, ccLabel,
+    calcMonsterAttack, formatPlayerStatus, formatMonsterStatus, formatMonsterSkill,
+};

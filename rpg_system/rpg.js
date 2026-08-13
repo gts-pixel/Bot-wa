@@ -1,15 +1,21 @@
 // rpg.js
+const path = require('path');
 const db = require('../db').promise(); // Import koneksi database MySQL promise wrapper
-const Rpgformula = require('./Rpgformula'); // Import formula RPG 
+const Rpgformula = require(path.join(__dirname, 'Rpgformula.js')); // Import formula RPG 
 const { formatSkillList, useSkill } = require('../skill_system/RpgClassSkill');
-const { startHunt, doAttack, doSkill, doFlee } = require('./battle');
+const { startHunt, doAttack, doSkill, doFlee } = require(path.join(__dirname, 'battle.js'));
 const RpgClassSkill = require('../skill_system/RpgClassSkill');
 const dbitem = require('../dbitem');
-const { checkCooldown } = require ('./cd')
-const { redeemCode, createCode } = require("./Redeem");
+const { checkCooldown } = require(path.join(__dirname, 'cd.js'));
+const { redeemCode, createCode } = require(path.join(__dirname, 'Redeem.js'));
 const SkillSlot = require('../skill_system/SkillSlot');
-const RPGShop = require('./RPGShop');
-const { getRannk } = require('./RankSystem');
+const RPGShop = require(path.join(__dirname, 'RPGShop.js'));
+const { getRank } = require(path.join(__dirname, 'RankSystem.js'));
+const PartySystem = require(path.join(__dirname, 'PartySystem.js'));
+const partyBattle = require(path.join(__dirname, 'PartyBattle.js'));
+const Gathering = require(path.join(__dirname, 'Gathering.js'));
+const Farming = require(path.join(__dirname, 'Farming.js'));
+const QuestSystem = require(path.join(__dirname, 'QuestSystem.js'));
 const OWNER_NUMBERS = (process.env.OWNER_NUMBER || '')
     .split(',')
     .map(n => n.trim().replace(/@.*$/, ''))
@@ -310,6 +316,7 @@ module.exports = async (client, message) => {
         const chat = await message.getChat();
         const nomorWA = senderId.split('@')[0];
         const nama = nomorWA; // gunakan nomor WA secara konsisten
+        const mentionedJids = message.mentionedJids || [];
 
         // Prefix Bot
         if (!body.startsWith(".")) return;
@@ -604,6 +611,81 @@ module.exports = async (client, message) => {
                 break;
             } 
 
+            // ═══════════════════
+            // PARTY SYSTEM
+            // ═══════════════════
+            case "createparty": {
+                await PartySystem.createParty(senderId, chat, args);
+                break;
+            }
+
+            case "invite": {
+                const target = mentionedJids.length ? mentionedJids[0] : args.trim();
+                if (!target) {
+                    await chat.sendMessage('❌ Format: *.invite @temen* atau *.invite 628xxxxxxxxxx*');
+                    break;
+                }
+                await PartySystem.invite(senderId, target, chat, client);
+                break;
+            }
+
+            case "joinparty": {
+                await PartySystem.joinParty(senderId, chat, client);
+                break;
+            }
+
+            case "leaveparty": {
+                await PartySystem.leaveParty(senderId, chat, client);
+                break;
+            }
+
+            case "kickparty": {
+                const target = mentionedJids.length ? mentionedJids[0] : args.trim();
+                if (!target) {
+                    await chat.sendMessage('❌ Format: *.kickparty @temen* atau *.kickparty 628xxxxxxxxxx*');
+                    break;
+                }
+                await PartySystem.kickParty(senderId, target, chat, client);
+                break;
+            }
+
+            case "disbandparty": {
+                await PartySystem.disbandParty(senderId, chat, client);
+                break;
+            }
+
+            case "partyinfo": {
+                await PartySystem.partyInfo(senderId, chat);
+                break;
+            }
+
+            // ═══════════════════
+            // PARTY BATTLE (co-op)
+            // ═══════════════════
+            case "phunt": {
+                await partyBattle.startPartyHunt(senderId, chat);
+                break;
+            }
+
+            case "pattack": {
+                await partyBattle.doPartyAttack(senderId, chat);
+                break;
+            }
+
+            case "puse": {
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.puse [1-4]*');
+                    break;
+                }
+                await partyBattle.doPartySkill(senderId, args.trim(), chat);
+                break;
+            }
+
+            case "pflee": {
+                await partyBattle.doPartyFlee(senderId, chat);
+                break;
+            }
+
             case "skills":
                 try {
                     const [rows] = await db.query('SELECT class FROM rpg_players WHERE nomor = ?', [senderId]);
@@ -820,6 +902,7 @@ module.exports = async (client, message) => {
             case 'equip':
             case 'unequip':
             case 'useitem':
+            case 'equipment': 
                 await dbitem.handleCommand(client, message, command, args);
                 break;
             case "shop" : {
@@ -889,6 +972,125 @@ module.exports = async (client, message) => {
                 }
                 const result = await redeemCode(senderId, args.trim());
                 await chat.sendMessage(result.message);
+                break;
+            }
+
+            // ═══════════════════
+            // GATHERING (fish / mine / chop)
+            // ═══════════════════
+            case 'fish': {
+                await Gathering.doFish(senderId, chat);
+                break;
+            }
+
+            case 'mine': {
+                await Gathering.doMine(senderId, chat);
+                break;
+            }
+
+            case 'chop': {
+                await Gathering.doChop(senderId, chat);
+                break;
+            }
+
+            // ═══════════════════
+            // FARMING
+            // ═══════════════════
+            case 'plant': {
+                await Farming.plant(senderId, args.trim(), chat);
+                break;
+            }
+
+            case 'myfarm': {
+                await Farming.myFarm(senderId, chat);
+                break;
+            }
+
+            case 'harvest': {
+                await Farming.harvest(senderId, chat);
+                break;
+            }
+
+            // ═══════════════════
+            // QUEST
+            // ═══════════════════
+            case 'quests':
+            case 'questlist': {
+                const msg = await QuestSystem.formatQuestList(senderId);
+                await chat.sendMessage(msg);
+                break;
+            }
+
+            case 'claimquest': {
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.claimquest [KODE]*');
+                    break;
+                }
+                const result = await QuestSystem.claimQuest(senderId, args.trim());
+                await chat.sendMessage(result.message);
+                break;
+            }
+
+            // Admin only
+            case 'addquest': {
+                if (!isOwner(senderId)) {
+                    await chat.sendMessage('❌ Kamu bukan admin.');
+                    break;
+                }
+                // Format: .addquest KEY type:daily objective:fish target:5 gold:200 exp:100 title:Mancing_Harian desc:Mancing_5_kali_hari_ini
+                // Atau reward item: item:Fish_Basket itemqty:1
+                const parts = args.trim().split(/\s+/);
+                const key = parts[0];
+                if (!key) {
+                    await chat.sendMessage(
+                        '❌ Format:\n*.addquest KEY type:daily objective:fish target:5 gold:200 exp:100 title:Judul_Quest desc:Deskripsi_quest*\n\n' +
+                        'objective bisa: hunt, fish, mine, chop, plant, harvest\n' +
+                        'type: daily atau onetime\n' +
+                        'title/desc pakai underscore ganti spasi'
+                    );
+                    break;
+                }
+                const opts = { questType: 'daily', objectiveTarget: 1 };
+                parts.slice(1).forEach(p => {
+                    const idx = p.indexOf(':');
+                    if (idx === -1) return;
+                    const k = p.slice(0, idx);
+                    const v = p.slice(idx + 1);
+                    if (k === 'type') opts.questType = v;
+                    else if (k === 'objective') opts.objectiveType = v;
+                    else if (k === 'target') opts.objectiveTarget = parseInt(v);
+                    else if (k === 'gold') opts.rewardGold = parseInt(v);
+                    else if (k === 'exp') opts.rewardExp = parseInt(v);
+                    else if (k === 'item') opts.rewardItem = v.replace(/_/g, ' ');
+                    else if (k === 'itemqty') opts.rewardItemQty = parseInt(v);
+                    else if (k === 'title') opts.title = v.replace(/_/g, ' ');
+                    else if (k === 'desc') opts.description = v.replace(/_/g, ' ');
+                });
+                if (!opts.title) opts.title = key;
+                try {
+                    const created = await QuestSystem.addQuest(key, opts, senderId);
+                    await chat.sendMessage(
+                        `✅ Quest *${created}* berhasil dibuat!\n` +
+                        `Tipe: ${opts.questType} | Objective: ${opts.objectiveType} x${opts.objectiveTarget}\n` +
+                        `Reward: 💰${opts.rewardGold || 0} ✨${opts.rewardExp || 0}${opts.rewardItem ? ` 📦${opts.rewardItem}` : ''}`
+                    );
+                } catch (e) {
+                    await chat.sendMessage(`❌ Gagal bikin quest: ${e.message}`);
+                }
+                break;
+            }
+
+            case 'removequest': {
+                if (!isOwner(senderId)) {
+                    await chat.sendMessage('❌ Kamu bukan admin.');
+                    break;
+                }
+                if (!args) {
+                    await chat.sendMessage('❌ Format: *.removequest [KODE]*');
+                    break;
+                }
+                const removed = await QuestSystem.removeQuest(args.trim());
+                await chat.sendMessage(`✅ Quest *${removed}* dinonaktifkan.`);
                 break;
             }
 

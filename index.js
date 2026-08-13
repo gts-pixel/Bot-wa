@@ -19,6 +19,8 @@ const GRUP_IZIN = [
     '120363299346931674@g.us',
     '120363409778160142@g.us',
     '120363422619255262@g.us',
+    '120363411133836248@g.us',
+    '120363294586774714@g.us',
 ];
 
 // ✅ BACA NOMOR DARI .env
@@ -126,9 +128,12 @@ async function startBot() {
                 'skill', 'skills', 'use', 'hunt', 'attack', 'flee',
                 'item', 'inv', 'addstat', 'statpoint', 'leaderboard', 'lb',
                 'addsysitem', 'addeffect', 'iteminfo', 'items', 'inventory',
-                'equip', 'inequip', 'useitem', 'redeem', 'addcode',
+                'equip', 'unequip', 'useitem', 'redeem', 'addcode',
                 'myskills', 'skillpool', 'equipskill', 'unequipskill',
-                'shop', 'buy', 'sell',
+                'shop', 'buy', 'sell', 'equipment', 'createparty', 'invite', 'joinparty', 'leaveparty', 'kickparty', 'disbandparty',
+                'partyinfo', 'phunt', 'pattack', 'puse', 'pflee',
+                'fish', 'mine', 'chop', 'plant', 'myfarm', 'harvest',
+                'quests', 'questlist', 'claimquest', 'addquest', 'removequest',
             ];
 
             // Bungkus msg agar kompatibel dengan handler lama
@@ -213,6 +218,7 @@ function wrapMessage(sock, msg, from, body, isGroup) {
         isGroup,
         pushName: pushname,
         hasMedia: !!(msg.message?.imageMessage || msg.message?.videoMessage),
+        mentionedJids: msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [],
         _raw: msg,                 // raw Baileys message
 
         // Ambil chat (simulasi)

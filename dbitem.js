@@ -1,12 +1,14 @@
 const db = require('./db').promise();
 
 // Konstanta Validasi
-const VALID_TYPES = ['equipment', 'consumable', 'material', 'quest']
+const VALID_TYPES = ['equipment', 'consumable', 'material', 'quest', 'tool', 'seed']
 const VALID_SUBTYPES = {
     equipment : ['weapon', 'armor', 'helmet', 'ring', 'accessory', 'shield'],
     consumable : ['potion','scroll', 'food', 'elixir'],
-    material : ['ore', 'cloth', 'hide', 'gem', 'herb', 'misc'],
-    quest : ['quest']
+    material : ['ore', 'cloth', 'hide', 'gem', 'herb', 'misc', 'seed', 'tool'],
+    quest : ['quest'],
+    tool : ['tool'],
+    seed : ['seed']
 };
 
 const VALID_SLOTS = ['weapon', 'armor', 'helmet', 'ring', 'accessory', 'shield'];
@@ -14,6 +16,22 @@ const VALID_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary' , 'myt
 const VALID_TIERS = ['F', 'E', 'D', 'C', 'B', 'A', 'S'];
 const VALID_STATS    = ['str', 'agi', 'int', 'dex', 'def', 'vit', 'wis', 'luk', 'hp', 'mp'];
 const VALID_EFFECTS  = ['stat_bonus', 'on_use', 'passive'];
+const STAT_KEY_MAP   = {
+    str: 'strength',
+    agi: 'agility',
+    int: 'intelligence',
+    dex: 'dexterity',
+    def: 'defense',
+    vit: 'vitality',
+    wis: 'wisdom',
+    luk: 'luck',
+    hp: 'hp',
+    mp: 'mp',
+};
+
+function resolveStatKey(stat) {
+    return STAT_KEY_MAP[stat] || stat;
+}
 
 // Rarity display
 const RARITY_DISPLAY = {
@@ -32,7 +50,7 @@ async function initializeItemTables() {
             item_key    VARCHAR(80) NOT NULL UNIQUE,
             name        VARCHAR(100) NOT NULL,
             emoji       VARCHAR(10),
-            type        ENUM('equipment','consumable','material','quest') NOT NULL,
+            type        ENUM('equipment','consumable','material','quest','tool','seed') NOT NULL,
             subtype     VARCHAR(30),
             equip_slot  VARCHAR(20),
             rarity      ENUM('common','uncommon','rare','epic','legendary','myth') NOT NULL DEFAULT 'common',
@@ -92,6 +110,16 @@ async function initializeItemTables() {
             console.error('Error creating item table:', err.message);
         }
     }
+
+    try {
+        await db.query(`
+            ALTER TABLE rpg_items
+            MODIFY COLUMN type ENUM('equipment','consumable','material','quest','tool','seed') NOT NULL
+        `);
+    } catch (err) {
+        console.warn('⚠️ Tidak bisa mengubah enum type rpg_items:', err.message);
+    }
+
     console.log('✅ Tabel item system siap.');
 }
 
@@ -253,9 +281,10 @@ async function handleAddSysItem(chat, senderId, argsStr) {
  
 // ── .addeffect ──────────────────────────────────────────────
 // Format: .addeffect <item_key> <effect_type> <stat> <value> <value_mode> [duration]
+// Bisa juga untuk beberapa stat sekaligus: .addeffect <item_key> <effect_type> str,agi 8,5 flat
 // Contoh: .addeffect iron_sword stat_bonus str 8 flat
 //         .addeffect hp_potion on_use hp 100 flat
-//         .addeffect power_scroll on_use str 20 percent 3
+//         .addeffect power_scroll on_use str,def 20,10 percent 3
 async function handleAddEffect(chat, senderId, argsStr) {
     if (!isAdmin(senderId)) {
         return chat.sendMessage('❌ Kamu tidak punya akses untuk perintah ini.');
@@ -269,45 +298,75 @@ async function handleAddEffect(chat, senderId, argsStr) {
             '*Contoh:*\n' +
             '.addeffect iron_sword stat_bonus str 8 flat\n' +
             '.addeffect hp_potion on_use hp 100 flat\n' +
-            '.addeffect power_scroll on_use str 20 percent 3\n\n' +
+            '.addeffect power_scroll on_use str,def 20,10 percent 3\n\n' +
+            '👉 Kalau item memberi 2 stat sekaligus, isi stat dan value dengan daftar dipisah koma.\n' +
             `*Effect type:* ${VALID_EFFECTS.join(', ')}\n` +
             `*Stat:* ${VALID_STATS.join(', ')}\n` +
             `*Value mode:* flat, percent`
         );
     }
  
-    const [itemKey, effectType, stat, valueStr, valueMode, durationStr] = args;
-    const value    = parseFloat(valueStr);
-    const duration = durationStr ? parseInt(durationStr) : null;
+    const [itemKey, effectType, statSpec, valueSpec, valueMode, durationSpec] = args;
+    const statEntries = statSpec.split(',').map(s => s.trim()).filter(Boolean);
+    const valueEntries = valueSpec.split(',').map(s => s.trim()).filter(Boolean);
  
-    // Validasi
+    if (statEntries.length === 0 || valueEntries.length === 0)
+        return chat.sendMessage('❌ Stat dan value tidak boleh kosong.');
+    if (statEntries.length !== valueEntries.length)
+        return chat.sendMessage('❌ Jumlah stat dan value harus sama. Contoh: str,agi 8,5');
+ 
     if (!VALID_EFFECTS.includes(effectType))
         return chat.sendMessage(`❌ Effect type tidak valid. Pilih: ${VALID_EFFECTS.join(', ')}`);
-    if (!VALID_STATS.includes(stat))
-        return chat.sendMessage(`❌ Stat tidak valid. Pilih: ${VALID_STATS.join(', ')}`);
     if (!['flat', 'percent'].includes(valueMode))
         return chat.sendMessage('❌ Value mode tidak valid. Pilih: flat atau percent');
-    if (isNaN(value))
-        return chat.sendMessage('❌ Value harus berupa angka.');
  
     const item = await getItemByKey(itemKey);
     if (!item) return chat.sendMessage(`❌ Item *${itemKey}* tidak ditemukan.`);
  
+    const parsedEntries = [];
+    for (let i = 0; i < statEntries.length; i++) {
+        const stat = statEntries[i];
+        const valueStr = valueEntries[i];
+        const value = parseFloat(valueStr);
+ 
+        if (!VALID_STATS.includes(stat))
+            return chat.sendMessage(`❌ Stat tidak valid. Pilih: ${VALID_STATS.join(', ')}`);
+        if (isNaN(value))
+            return chat.sendMessage('❌ Value harus berupa angka.');
+ 
+        parsedEntries.push({ stat, value });
+    }
+ 
+    const durationParts = durationSpec ? durationSpec.split(',').map(s => s.trim()).filter(Boolean) : [];
+    if (durationParts.length > 0 && durationParts.length !== parsedEntries.length)
+        return chat.sendMessage('❌ Jumlah duration harus sama dengan jumlah stat, atau cukup isi satu duration untuk semua efek.');
+ 
     try {
-        await db.query(
-            'INSERT INTO rpg_item_effects (item_id, effect_type, stat, value, value_mode, duration) VALUES (?, ?, ?, ?, ?, ?)',
-            [item.id, effectType, stat, value, valueMode, duration]
-        );
+        for (let i = 0; i < parsedEntries.length; i++) {
+            const entry = parsedEntries[i];
+            const duration = durationParts.length > 0
+                ? parseInt(durationParts[i])
+                : durationSpec
+                    ? parseInt(durationSpec)
+                    : null;
  
-        const sign = value >= 0 ? '+' : '';
-        const val  = valueMode === 'percent' ? `${sign}${value}%` : `${sign}${value}`;
-        const dur  = duration ? ` selama ${duration} turn` : ' (permanen)';
+            await db.query(
+                'INSERT INTO rpg_item_effects (item_id, effect_type, stat, value, value_mode, duration) VALUES (?, ?, ?, ?, ?, ?)',
+                [item.id, effectType, entry.stat, entry.value, valueMode, duration]
+            );
+        }
  
-        await chat.sendMessage(
-            `✅ *Efek ditambahkan ke ${item.name}!*\n\n` +
-            `📌 ${effectType} → ${stat.toUpperCase()} ${val}${dur}\n\n` +
-            `Ketik *.iteminfo ${itemKey}* untuk lihat semua efek.`
-        );
+        const lines = [`✅ *Efek ditambahkan ke ${item.name}!*\n`];
+        parsedEntries.forEach((entry, index) => {
+            const sign = entry.value >= 0 ? '+' : '';
+            const val  = valueMode === 'percent' ? `${sign}${entry.value}%` : `${sign}${entry.value}`;
+            const itemDuration = durationParts.length > 0 ? durationParts[index] : durationSpec;
+            const dur  = itemDuration ? ` selama ${itemDuration} turn` : ' (permanen)';
+            lines.push(`📌 ${effectType} → ${entry.stat.toUpperCase()} ${val}${dur}`);
+        });
+        lines.push(`\nKetik *.iteminfo ${itemKey}* untuk lihat semua efek.`);
+ 
+        await chat.sendMessage(lines.join('\n'));
     } catch (err) {
         console.error('addeffect error:', err);
         await chat.sendMessage('❌ Gagal menambahkan efek.');
@@ -522,11 +581,11 @@ async function handleUseItem(chat, senderId, argsStr) {
  
     for (const eff of onUseEffects) {
         const stat = eff.stat;
+        const statKey = resolveStatKey(stat);
         let   val  = eff.value;
  
         if (eff.value_mode === 'percent') {
-            // Hitung dari max stat
-            const maxStat = stat === 'hp' ? player.max_hp : stat === 'mp' ? player.max_mp : player[stat] || 0;
+            const maxStat = stat === 'hp' ? player.max_hp : stat === 'mp' ? player.max_mp : (player[statKey] ?? player[stat] ?? 0);
             val = Math.round(maxStat * (eff.value / 100));
         }
  
@@ -543,9 +602,12 @@ async function handleUseItem(chat, senderId, argsStr) {
             resultLines.push(`💙 MP: ${player.mp} → ${newMp} (+${restored})`);
             player.mp = newMp;
         } else if (VALID_STATS.includes(stat)) {
-            // Buff sementara — simpan ke tabel buff jika ada, atau langsung update
+            const currentValue = Number(player[statKey] ?? player[stat] ?? 0);
+            const nextValue = currentValue + val;
+            updates[statKey] = nextValue;
             const sign = val >= 0 ? '+' : '';
-            resultLines.push(`⚡ ${stat.toUpperCase()}: ${sign}${val}${eff.duration ? ` selama ${eff.duration} turn` : ''}`);
+            resultLines.push(`⚡ ${stat.toUpperCase()}: ${currentValue} → ${nextValue} (${sign}${val}${eff.duration ? ` selama ${eff.duration} turn` : ''})`);
+            player[statKey] = nextValue;
         }
     }
  
@@ -608,7 +670,7 @@ async function addItemToInventory(playerNomor, itemKey, quantity = 1, source = '
 }
  
 // ── Ambil semua stat bonus dari equipment yang diequip ───────
-async function getEquippedStatBonus(playerNomor) {
+async function getEquippedStatBonus(playerNomor, baseStats = {}) {
     const [rows] = await db.query(
         `SELECT ie.stat, ie.value, ie.value_mode
          FROM rpg_equipped eq
@@ -619,20 +681,82 @@ async function getEquippedStatBonus(playerNomor) {
         [playerNomor]
     );
  
-    // Agregat semua bonus
     const bonus = {};
     rows.forEach(r => {
-        if (!bonus[r.stat]) bonus[r.stat] = 0;
-        bonus[r.stat] += r.value; // flat untuk sekarang
+        const statKey = resolveStatKey(r.stat);
+        const baseValue = Number(baseStats[statKey] ?? baseStats[r.stat] ?? 0);
+        const amount = r.value_mode === 'percent'
+            ? Math.round(baseValue * (Number(r.value) / 100))
+            : Number(r.value) || 0;
+
+        bonus[statKey] = (bonus[statKey] || 0) + amount;
     });
  
-    return bonus; // { str: 15, def: 10, ... }
+    return bonus;
 }
  
+// ── .equipment (lihat equipment yang sedang dipakai dan efeknya) ──
+async function handleEquipment(chat, senderId) {
+    // Ambil player untuk base stats (dipakai jika ada efek percent)
+    const [playerRows] = await db.query('SELECT * FROM rpg_players WHERE nomor = ?', [senderId]);
+    if (!playerRows.length) return chat.sendMessage('❌ Kamu belum terdaftar. Ketik *.login* dulu.');
+    const player = playerRows[0];
+
+    const [rows] = await db.query(
+        `SELECT e.slot, i.item_key, i.name, i.emoji, i.tier, i.rarity, ie.effect_type, ie.stat, ie.value, ie.value_mode, ie.duration
+         FROM rpg_equipped e
+         JOIN rpg_inventory inv ON e.inventory_id = inv.id
+         JOIN rpg_items i ON inv.item_id = i.id
+         LEFT JOIN rpg_item_effects ie ON ie.item_id = i.id
+         WHERE e.player_nomor = ?
+         ORDER BY e.slot`
+        , [senderId]
+    );
+
+    if (!rows.length) return chat.sendMessage('🎯 Kamu belum memakai equipment apapun.');
+
+    // Kelompokkan per slot
+    const grouped = {};
+    rows.forEach(r => {
+        if (!grouped[r.slot]) grouped[r.slot] = { item: { name: r.name, emoji: r.emoji, tier: r.tier, rarity: r.rarity, key: r.item_key }, effects: [] };
+        if (r.stat) grouped[r.slot].effects.push({ type: r.effect_type, stat: r.stat, value: r.value, value_mode: r.value_mode, duration: r.duration });
+    });
+
+    const lines = ['🎯 *Equipment Kamu saat ini*\n'];
+    for (const [slot, data] of Object.entries(grouped)) {
+        const rar = RARITY_DISPLAY[data.item.rarity] || { emoji: '', label: data.item.rarity };
+        lines.push(`${slot.toUpperCase()}: ${data.item.emoji || '📦'} *${data.item.name}* ${rar.emoji} · Tier ${data.item.tier || '-'} · Key: \`${data.item.key}\``);
+        if (data.effects.length > 0) {
+            data.effects.forEach(e => {
+                const sign = e.value >= 0 ? '+' : '';
+                const val = e.value_mode === 'percent' ? `${sign}${e.value}%` : `${sign}${e.value}`;
+                const dur = e.duration ? ` selama ${e.duration} turn` : '';
+                lines.push(`  ⚡ ${e.stat.toUpperCase()} ${val}${dur}`);
+            });
+        } else {
+            lines.push('  (Tidak ada efek)');
+        }
+        lines.push('');
+    }
+
+    // Tampilkan ringkasan bonus total jika ada
+    const totalBonus = await getEquippedStatBonus(senderId, player);
+    const bonusKeys = Object.keys(totalBonus);
+    if (bonusKeys.length > 0) {
+        const bparts = bonusKeys.map(k => `${k.toUpperCase()} ${totalBonus[k] >= 0 ? '+' : ''}${totalBonus[k]}`);
+        lines.push('\n✨ *Total Bonus dari Equipment:* ' + bparts.join(', '));
+    }
+
+    await chat.sendMessage(lines.join('\n'));
+}
+
 // ============================================================
 //  MAIN HANDLER — export untuk dipakai di rpg.js
 // ============================================================
+const dbReady = initializeItemTables();
+
 module.exports = {
+    dbReady,
     initializeItemTables,
     addItemToInventory,
     getEquippedStatBonus,
@@ -653,9 +777,8 @@ module.exports = {
             case 'equip':       return handleEquip(chat, senderId, args);
             case 'unequip':     return handleUnequip(chat, senderId, args);
             case 'useitem':     return handleUseItem(chat, senderId, args);
+            case 'equipment':   return handleEquipment(chat, senderId);
         }
     },
 };
  
-// Inisialisasi tabel saat modul dimuat
-initializeItemTables();

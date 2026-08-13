@@ -38,8 +38,8 @@ const TIER_E_MONSTERS = {
             luk : 18,
         },
         reward: {
-            xp   : 30,
-            gold : { min: 8, max: 18 },
+            xp   : { min: 75, max: 105 },
+            gold : { min: 28, max: 63 },
             drops: [
                 { item: 'Iron Tusk',   rate: 0.65 },
                 { item: 'Thick Hide',  rate: 0.70 },
@@ -75,8 +75,8 @@ const TIER_E_MONSTERS = {
             luk : 25,
         },
         reward: {
-            xp   : 26,
-            gold : { min: 7, max: 15 },
+            xp   : { min: 65, max: 91 },
+            gold : { min: 25, max: 55 },
             drops: [
                 { item: 'Gecko Tail',  rate: 0.75 },
                 { item: 'Moss Scale',  rate: 0.55 },
@@ -112,8 +112,8 @@ const TIER_E_MONSTERS = {
             luk : 23,
         },
         reward: {
-            xp   : 28,
-            gold : { min: 7, max: 16 },
+            xp   : { min: 70, max: 100},
+            gold : { min: 25, max: 56 },
             drops: [
                 { item: 'Hornet Stinger', rate: 0.70 },
                 { item: 'Honey Comb',     rate: 0.45 },
@@ -150,8 +150,8 @@ const TIER_E_MONSTERS = {
             luk : 15,
         },
         reward: {
-            xp   : 27,
-            gold : { min: 8, max: 17 },
+            xp   : { min: 70, max: 102},
+            gold : { min: 30, max: 65 },
             drops: [
                 { item: 'Mole Spike', rate: 0.70 },
                 { item: 'Cave Dirt',  rate: 0.60 },
@@ -187,8 +187,8 @@ const TIER_E_MONSTERS = {
             luk : 18,
         },
         reward: {
-            xp   : 25,
-            gold : { min: 6, max: 14 },
+            xp   : { min: 88, max: 95 },
+            gold : { min: 23, max: 53 },
             drops: [
                 { item: 'Beetle Shell', rate: 0.80 },
                 { item: 'Cave Gem',     rate: 0.20 },
@@ -224,8 +224,8 @@ const TIER_E_MONSTERS = {
             luk : 25,
         },
         reward: {
-            xp   : 32,
-            gold : { min: 9, max: 18 },
+            xp   : { min: 90, max: 122},
+            gold : { min: 34, max: 68 },
             drops: [
                 { item: 'Spirit Shard', rate: 0.65 },
                 { item: 'Ectoplasm',    rate: 0.50 },
@@ -262,8 +262,8 @@ const TIER_E_MONSTERS = {
             luk : 15,
         },
         reward: {
-            xp   : 28,
-            gold : { min: 8, max: 16 },
+            xp   : { min: 78, max: 106},
+            gold : { min: 30, max: 61 },
             drops: [
                 { item: 'Turtle Shell', rate: 0.60 },
                 { item: 'Mud Stone',    rate: 0.50 },
@@ -299,8 +299,8 @@ const TIER_E_MONSTERS = {
             luk : 18,
         },
         reward: {
-            xp   : 26,
-            gold : { min: 7, max: 14 },
+            xp   : { min: 73, max: 99 },
+            gold : { min: 27, max: 53 },
             drops: [
                 { item: 'Creeper Root', rate: 0.75 },
                 { item: 'Bog Herb',     rate: 0.60 },
@@ -336,8 +336,8 @@ const TIER_E_MONSTERS = {
             luk : 20,
         },
         reward: {
-            xp   : 30,
-            gold : { min: 9, max: 18 },
+            xp   : { min: 84, max: 114 },
+            gold : { min: 34, max: 68 },
             drops: [
                 { item: 'Crab Claw',   rate: 0.65 },
                 { item: 'Crab Shell',  rate: 0.70 },
@@ -375,8 +375,8 @@ const TIER_E_MONSTERS = {
             luk : 15,
         },
         reward: {
-            xp   : 35,
-            gold : { min: 10, max: 22 },
+            xp   : { min: 98, max: 133 },
+            gold : { min: 38, max: 84 },
             drops: [
                 { item: 'Bull Horn', rate: 0.60 },
                 { item: 'Bull Hide', rate: 0.65 },
@@ -412,8 +412,8 @@ const TIER_E_MONSTERS = {
             luk : 25,
         },
         reward: {
-            xp   : 27,
-            gold : { min: 7, max: 15 },
+            xp   : { min: 76, max: 103},
+            gold : { min: 27, max: 57 },
             drops: [
                 { item: 'Sun Petal',  rate: 0.70 },
                 { item: 'Light Dust', rate: 0.50 },
@@ -449,8 +449,8 @@ const TIER_E_MONSTERS = {
             luk : 18,
         },
         reward: {
-            xp   : 33,
-            gold : { min: 10, max: 20 },
+            xp   : { min: 92, max: 125 },
+            gold : { min: 38, max: 76 },
             drops: [
                 { item: 'Bison Fur',  rate: 0.70 },
                 { item: 'Bison Horn', rate: 0.55 },
@@ -487,8 +487,8 @@ const TIER_E_MONSTERS = {
             luk : 30,
         },
         reward: {
-            xp   : 32,
-            gold : { min: 10, max: 20 },
+            xp   : { min: 90, max: 122},
+            gold : { min: 38, max: 76 },
             drops: [
                 { item: 'Imp Tooth',   rate: 0.65 },
                 { item: 'Ruin Shard',  rate: 0.50 },
@@ -525,7 +525,7 @@ const TIER_E_MONSTERS = {
             luk : 23,
         },
         reward: {
-            xp   : 35,
+            xp   : { min: 98, max: 140 },
             gold : { min: 11, max: 22 },
             drops: [
                 { item: 'Ghost Wax',   rate: 0.65 },

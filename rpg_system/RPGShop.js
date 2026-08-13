@@ -204,6 +204,7 @@ async function formatShopList(page = 1, type) {
         if (item.desc) out += `   _${item.desc}_\n`;
     }
 
+    out += `\n💡 *.iteminfo [nama item]* — lihat detail item\n`;
     out += `\n💡 *.buy [nama item] [jumlah]* — beli item\n`;
     out += `💡 *.sell [nama item] [jumlah]* — jual item\n`;
     if (totalPages > 1) out += `💡 *.shop ${type} [halaman]* — lihat halaman lain`;
